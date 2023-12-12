@@ -3,6 +3,7 @@ import Box from "@mui/material/Box";
 import { ListItemText } from "@mui/material";
 import Avatar from "@mui/material/Avatar";
 import Link from "next/link";
+import Typography from "@mui/material/Typography";
 import { toSvg } from "jdenticon";
 
 // Creates a thread component to be displayed in the list
@@ -29,29 +30,27 @@ export default function ThreadComponent(t: Readonly<Thread>) {
             style={{ textDecoration: "none", color: "#000" }}>
         <Box sx={{ p: 2 }} aria-label={"Thread Display Box"}>
           <Box aria-label={"Thread Title"}
-               sx={{
-                 fontSize: { xs: "1.25rem", sm: "1.5rem" },
-                 fontWeight: "600",
-                 textOverflow: "ellipsis",
-                 overflow: "hidden",
-                 display: "-webkit-box",
-                 WebkitLineClamp: "2",
-                 WebkitBoxOrient: "vertical",
-                 mb: 1,
-               }}>
-            {t.title}
+               sx={{ mb: 1 }}>
+            <Typography sx={{
+              fontSize: { xs: "1.25rem", sm: "1.5rem" },
+              fontWeight: "600",
+              textOverflow: "ellipsis",
+              overflow: "hidden",
+              display: "-webkit-box",
+              WebkitLineClamp: "2",
+              WebkitBoxOrient: "vertical",
+            }}>{t.title}</Typography>
           </Box>
           <Box aria-label={"Thread Body"}
-               sx={{
-                 fontSize: { xs: "1rem", sm: "1.25rem" },
-                 textOverflow: "ellipsis",
-                 overflow: "hidden",
-                 display: "-webkit-box",
-                 WebkitLineClamp: "2",
-                 WebkitBoxOrient: "vertical",
-                 mb: 1,
-               }}>
-            {t.body}
+               sx={{ mb: 1 }}>
+            <Typography sx={{
+              fontSize: { xs: "1rem", sm: "1.25rem" },
+              textOverflow: "ellipsis",
+              overflow: "hidden",
+              display: "-webkit-box",
+              WebkitLineClamp: "2",
+              WebkitBoxOrient: "vertical",
+            }}>{t.body}</Typography>
           </Box>
           <Box aria-label={"Thread Details"}
                sx={{
@@ -85,7 +84,6 @@ export default function ThreadComponent(t: Readonly<Thread>) {
                         height: { xs: "20px", sm: "30px" },
                         aspectRatio: 1,
                       }}>
-                <AvatarIdenticon username={t.creator} />
               </Avatar>
               <ListItemText secondary={t.creator}
                             secondaryTypographyProps={{
@@ -130,9 +128,8 @@ export default function ThreadComponent(t: Readonly<Thread>) {
                        borderRadius: "0.25rem",
                        px: 1,
                        py: 0.5,
-                       fontSize: "0.75rem",
                      }}>
-                  {tag}
+                  <Typography fontSize={"0.75rem"}>{tag}</Typography>
                 </Box>
               ))}
             </Box>
@@ -144,7 +141,7 @@ export default function ThreadComponent(t: Readonly<Thread>) {
                    mt: 2,
                    alignItems: "right",
                  }}>
-              {t.num_comments} comments
+              <Typography>{t.num_comments + " comments"}</Typography>
             </Box>
           </Box>
         </Box>
