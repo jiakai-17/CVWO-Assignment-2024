@@ -1,0 +1,45 @@
+Table "users" {
+  "username" VARCHAR(64) [pk]
+  "password" TEXT [not null]
+}
+
+Table "threads" {
+  "id" VARCHAR(36) [pk]
+  "title" TEXT [not null]
+  "body" TEXT [not null]
+  "creator" VARCHAR(64) [not null]
+  "created_time" TIMESTAMP [not null, default: `NOW()`]
+  "updated_time" TIMESTAMP [not null, default: `NOW()`]
+}
+
+Table "comments" {
+  "id" VARCHAR(36) [pk]
+  "body" TEXT [not null]
+  "creator" VARCHAR(64) [not null]
+  "thread_id" TEXT [not null]
+  "created_time" TIMESTAMP [not null, default: `NOW()`]
+  "updated_time" TIMESTAMP [not null, default: `NOW()`]
+}
+
+Table "tags" {
+  "name" VARCHAR(64) [pk]
+}
+
+Table "thread_tags" {
+  "thread_id" VARCHAR(36) [not null]
+  "tag_name" VARCHAR(64) [not null]
+
+Indexes {
+  (thread_id, tag_name) [pk]
+}
+}
+
+Ref "fk_creator":"users"."username" < "threads"."creator" [delete: cascade]
+
+Ref "fk_creator":"users"."username" < "comments"."creator" [delete: cascade]
+
+Ref "fk_thread":"threads"."id" < "comments"."thread_id" [delete: cascade]
+
+Ref "fk_thread":"threads"."id" < "thread_tags"."thread_id" [delete: cascade]
+
+Ref "fk_tag":"tags"."name" < "thread_tags"."tag_name" [delete: cascade]
