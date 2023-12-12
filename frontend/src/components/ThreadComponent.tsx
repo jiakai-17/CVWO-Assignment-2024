@@ -2,8 +2,8 @@ import Thread from "@/models/thread/Thread";
 import Box from "@mui/material/Box";
 import { ListItemText } from "@mui/material";
 import Avatar from "@mui/material/Avatar";
-import AvatarIdenticon from "@/components/AvatarIdenticon";
 import Link from "next/link";
+import { toSvg } from "jdenticon";
 
 // Creates a thread component to be displayed in the list
 export default function ThreadComponent(t: Readonly<Thread>) {
@@ -76,6 +76,7 @@ export default function ThreadComponent(t: Readonly<Thread>) {
                               flexGrow: 0,
                             }} />
               <Avatar alt={t.creator}
+                      src={`data:image/svg+xml;utf8,${encodeURIComponent(toSvg(t.creator, 50))}`}
                       sx={{
                         bgcolor: "white",
                         border: 1,
