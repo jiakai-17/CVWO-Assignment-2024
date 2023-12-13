@@ -14,12 +14,12 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS threads (
-    id VARCHAR(36) PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
     body TEXT NOT NULL,
     creator VARCHAR(64) NOT NULL,
-    created_time TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_time TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     num_comments INTEGER NOT NULL DEFAULT 0,
     CONSTRAINT fk_creator FOREIGN KEY (creator) REFERENCES users(username) ON DELETE CASCADE,
     CONSTRAINT created_time_not_future CHECK (created_time <= NOW()),
@@ -29,12 +29,12 @@ CREATE TABLE IF NOT EXISTS threads (
 );
 
 CREATE TABLE IF NOT EXISTS comments (
-    id VARCHAR(36) PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     body TEXT NOT NULL,
     creator VARCHAR(64) NOT NULL,
-    thread_id TEXT NOT NULL,
-    created_time TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_time TIMESTAMP NOT NULL DEFAULT NOW(),
+    thread_id UUID NOT NULL,
+    created_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_creator FOREIGN KEY (creator) REFERENCES users(username) ON DELETE CASCADE,
     CONSTRAINT fk_thread FOREIGN KEY (thread_id) REFERENCES threads(id) ON DELETE CASCADE,
     CONSTRAINT created_time_not_future CHECK (created_time <= NOW()),
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS tags (
 );
 
 CREATE TABLE IF NOT EXISTS thread_tags (
-    thread_id VARCHAR(36) NOT NULL,
+    thread_id UUID NOT NULL,
     tag_name VARCHAR(64) NOT NULL,
     PRIMARY KEY (thread_id, tag_name),
     CONSTRAINT fk_thread FOREIGN KEY (thread_id) REFERENCES threads(id) ON DELETE CASCADE,
@@ -84,7 +84,7 @@ END;
 $$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE TRIGGER on_delete_comment
+CREATE OR REPLACE TRIGGER on_comment
 AFTER INSERT OR DELETE ON comments
 FOR EACH ROW
 EXECUTE FUNCTION update_comments_count();
