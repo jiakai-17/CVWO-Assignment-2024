@@ -1,6 +1,8 @@
+"use client";
+
 import Thread from "@/models/thread/Thread";
 import Box from "@mui/material/Box";
-import { ListItemText } from "@mui/material";
+import { Chip, ListItemText } from "@mui/material";
 import Avatar from "@mui/material/Avatar";
 import Link from "next/link";
 import Typography from "@mui/material/Typography";
@@ -14,6 +16,10 @@ export default function ThreadComponent(t: Readonly<Thread>) {
     timeStyle: "short",
     timeZone: "Asia/Singapore",
   }).format(t.created_time);
+
+  function handleChipClick(tagName: string) {
+    console.log(tagName);
+  }
 
   return (
     <Box
@@ -122,15 +128,7 @@ export default function ThreadComponent(t: Readonly<Thread>) {
                    mt: 2,
                  }}>
               {t.tags.map((tag) => (
-                <Box key={tag}
-                     sx={{
-                       bgcolor: "lightgray",
-                       borderRadius: "0.25rem",
-                       px: 1,
-                       py: 0.5,
-                     }}>
-                  <Typography fontSize={"0.75rem"}>{tag}</Typography>
-                </Box>
+                <Chip key={t.id + tag} label={tag} onClick={() => handleChipClick(tag)} />
               ))}
             </Box>
             <Box aria-label={"Thread Comments"}
