@@ -1,20 +1,22 @@
-"use client";
-
 import * as React from "react";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 export default function Navbar() {
 
-  const currentLoginState = localStorage.getItem("isLogin") ?? "false";
+  const [isLogin, setIsLogin] =
+    useState(JSON.parse(localStorage?.getItem("isLogin") ?? "false"));
 
-  const [isLogin, setIsLogin] = useState(JSON.parse(currentLoginState));
-  localStorage.setItem("isLogin", currentLoginState);
+  useEffect(() => {
+    if (localStorage?.getItem("isLogin") === null) {
+      localStorage.setItem("isLogin", JSON.stringify(false));
+    }
+  }, [isLogin]);
 
   function toggleLogin() {
     localStorage.setItem("isLogin", JSON.stringify(!isLogin));
