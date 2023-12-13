@@ -1,5 +1,9 @@
-import ClientComponent from "@/components/ClientComponent";
+import dynamic from "next/dynamic";
 import "./globals.css";
+
+const ClientComponent =
+  dynamic(() => import("@/components/ClientComponent"),
+    { ssr: false });
 
 export const metadata = {
   title: "Next.js",
