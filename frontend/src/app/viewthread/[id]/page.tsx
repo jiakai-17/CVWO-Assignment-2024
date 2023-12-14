@@ -5,29 +5,39 @@ import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Link from "next/link";
-import { Chip, Divider, ListItemText } from "@mui/material";
-import Avatar from "@mui/material/Avatar";
-import { toSvg } from "jdenticon";
+import { Divider, ListItemText } from "@mui/material";
 import TextField from "@mui/material/TextField";
 import * as React from "react";
-import SortIcon from "@mui/icons-material/Sort";
+import { useEffect, useState } from "react";
 import sampleComments from "@/models/comment/SampleComments";
+import UserAvatarDetails from "@/components/UserAvatarDetails";
+import UserContentTimestamp from "@/components/UserContentTimestamp";
+import ThreadTag from "@/components/ThreadTag";
+import SortButton from "@/components/SortButton";
+import CommentTextField from "@/components/CommentTextField";
 
 export default function Page({ params }: Readonly<{ params: { id: string } }>) {
 
   const threadToDisplay = sampleThreads.find(thread => thread.id === params.id);
 
+  const [commentContent, setCommentContent] = useState("");
 
-  const formattedCreatedTime = threadToDisplay === undefined ? "" :
-    new Intl.DateTimeFormat("en-GB", {
-      dateStyle: "short",
-      timeStyle: "short",
-      timeZone: "Asia/Singapore",
-    }).format(threadToDisplay.created_time);
+  useEffect(() => {
+    console.log("comment content changed", commentContent);
 
-  function handleChipClick(tagName: string) {
-    console.log(tagName);
-  }
+  }, [commentContent]);
+
+  // Sorting comments by criteria
+  const [commentSortCriteria, setCommentSortCriteria] = useState("Newest first");
+
+  const availableCommentSortCriteria = new Map<string, string>([
+    ["Newest first", "date desc"],
+    ["Oldest first", "date asc"],
+  ]);
+
+  useEffect(() => {
+    console.log(commentSortCriteria);
+  }, [commentSortCriteria]);
 
   return (
     <Box>
@@ -97,8 +107,7 @@ export default function Page({ params }: Readonly<{ params: { id: string } }>) {
               }}>Tags:
               </Typography>
               {threadToDisplay.tags.map(tag => (
-                <Chip key={threadToDisplay.id + tag} label={tag}
-                      onClick={() => handleChipClick(tag)} />
+                <ThreadTag key={threadToDisplay.id + tag} tag={tag} />
               ))}
             </Box>
             <Divider />
@@ -124,25 +133,7 @@ export default function Page({ params }: Readonly<{ params: { id: string } }>) {
                                 flexShrink: 0,
                                 flexGrow: 0,
                               }} />
-                <Avatar alt={threadToDisplay.creator}
-                        src={`data:image/svg+xml;utf8,${encodeURIComponent(toSvg(threadToDisplay.creator, 50))}`}
-                        sx={{
-                          bgcolor: "white",
-                          border: 1,
-                          borderColor: "darkgray",
-                          width: { xs: "20px", sm: "30px" },
-                          height: { xs: "20px", sm: "30px" },
-                          aspectRatio: 1,
-                        }}>
-                </Avatar>
-                <ListItemText secondary={threadToDisplay.creator}
-                              secondaryTypographyProps={{
-                                sx: {
-                                  textOverflow: "ellipsis",
-                                  overflow: "hidden",
-                                },
-                              }}
-                />
+                <UserAvatarDetails creator={threadToDisplay.creator} />
               </Box>
               <Box aria-label={"Thread Created Time"}
                    sx={{
@@ -150,43 +141,24 @@ export default function Page({ params }: Readonly<{ params: { id: string } }>) {
                      gap: { xs: "0.4rem", sm: "0.5rem" },
                      alignItems: "center",
                    }}>
-                <div>
-                  <ListItemText secondary={" on " + formattedCreatedTime}
-                                sx={{ fontSize: { xs: "0.5rem", sm: "body2" } }} />
-                </div>
+                <UserContentTimestamp
+                  createdTimestamp={threadToDisplay.created_time}
+                  updatedTimestamp={threadToDisplay.updated_time} />
               </Box>
             </Box>
           </Box>
           <Divider sx={{ mx: 4, my: 4 }} />
-          <Box sx={{ mx: 4, width: "full" }}>
-            <TextField
-              id="outlined-multiline-static"
-              label="Leave a comment..."
-              multiline
-              rows={3}
-              variant="outlined"
-              fullWidth
-            />
-            <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-              <Button
-                variant="contained"
-                size={"large"}
-                sx={{ my: 2 }}
-              >
-                COMMENT
-              </Button>
-            </Box>
-          </Box>
+          <CommentTextField
+            setCommentContent={setCommentContent}
+            handleSubmit={() => console.log("submit Comment", commentContent)} />
           <Divider sx={{ mx: 4, mt: 2, mb: 4 }} />
           <Box
             sx={{ mx: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <Typography variant="h5">99 Comments</Typography>
-            <Button
-              variant="outlined"
-              size="large"
-              endIcon={<SortIcon />}>
-              Sort...
-            </Button>
+            <SortButton
+              availableSortCriteriaMappings={availableCommentSortCriteria}
+              setSortCriteria={setCommentSortCriteria}
+              size={"large"} />
           </Box>
           <Box sx={{ mx: 4, mb: 20 }}>
             {sampleComments.map(comment => (
@@ -197,46 +169,33 @@ export default function Page({ params }: Readonly<{ params: { id: string } }>) {
                      border: 2,
                      borderColor: "lightgray",
                      borderRadius: "0.375rem",
-                     overflow: "hidden",
                    }}>
-                <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
+                <Box sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  mb: 2,
+                  maxWidth: "100%",
+                }}>
                   <Box sx={{
                     display: "flex",
                     gap: { xs: "0.4rem", sm: "0.5rem" },
                     alignItems: "center",
-                    maxWidth: "100%",
                     pr: 1,
+                    minWidth: 0,
                   }}>
-                    <Avatar alt={comment.creator}
-                            src={`data:image/svg+xml;utf8,${encodeURIComponent(toSvg(comment.creator, 50))}`}
-                            sx={{
-                              bgcolor: "white",
-                              border: 1,
-                              borderColor: "darkgray",
-                              width: { xs: "20px", sm: "30px" },
-                              height: { xs: "20px", sm: "30px" },
-                              aspectRatio: 1,
-                            }}>
-                    </Avatar>
-                    <ListItemText secondary={comment.creator}
-                                  secondaryTypographyProps={{
-                                    sx: {
-                                      textOverflow: "ellipsis",
-                                      overflow: "hidden",
-                                    },
-                                  }}
-                    />
+                    <UserAvatarDetails creator={comment.creator} />
                   </Box>
                   <Box aria-label={"Thread Created Time"}
                        sx={{
                          display: "inline-flex",
                          gap: { xs: "0.4rem", sm: "0.5rem" },
                          alignItems: "center",
+                         flexShrink: 0,
                        }}>
-                    <div>
-                      <ListItemText secondary={" on " + formattedCreatedTime}
-                                    sx={{ fontSize: { xs: "0.5rem", sm: "body2" } }} />
-                    </div>
+                    <UserContentTimestamp
+                      createdTimestamp={comment.created_time}
+                      updatedTimestamp={comment.updated_time}
+                    />
                   </Box>
                 </Box>
                 <Typography>
@@ -247,7 +206,6 @@ export default function Page({ params }: Readonly<{ params: { id: string } }>) {
           </Box>
         </>
       }
-
     </Box>
   );
 }

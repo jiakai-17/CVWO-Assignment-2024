@@ -2,24 +2,15 @@
 
 import Thread from "@/models/thread/Thread";
 import Box from "@mui/material/Box";
-import { Chip, ListItemText } from "@mui/material";
-import Avatar from "@mui/material/Avatar";
+import { ListItemText } from "@mui/material";
 import Link from "next/link";
 import Typography from "@mui/material/Typography";
-import { toSvg } from "jdenticon";
+import UserAvatarDetails from "@/components/UserAvatarDetails";
+import UserContentTimestamp from "@/components/UserContentTimestamp";
+import ThreadTag from "@/components/ThreadTag";
 
 // Creates a thread component to be displayed in the list
 export default function ThreadComponent(t: Readonly<Thread>) {
-
-  const formattedCreatedTime = new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "short",
-    timeStyle: "short",
-    timeZone: "Asia/Singapore",
-  }).format(t.created_time);
-
-  function handleChipClick(tagName: string) {
-    console.log(tagName);
-  }
 
   return (
     <Box
@@ -80,25 +71,7 @@ export default function ThreadComponent(t: Readonly<Thread>) {
                               flexShrink: 0,
                               flexGrow: 0,
                             }} />
-              <Avatar alt={t.creator}
-                      src={`data:image/svg+xml;utf8,${encodeURIComponent(toSvg(t.creator, 50))}`}
-                      sx={{
-                        bgcolor: "white",
-                        border: 1,
-                        borderColor: "darkgray",
-                        width: { xs: "20px", sm: "30px" },
-                        height: { xs: "20px", sm: "30px" },
-                        aspectRatio: 1,
-                      }}>
-              </Avatar>
-              <ListItemText secondary={t.creator}
-                            secondaryTypographyProps={{
-                              sx: {
-                                textOverflow: "ellipsis",
-                                overflow: "hidden",
-                              },
-                            }}
-              />
+              <UserAvatarDetails creator={t.creator} />
             </Box>
             <Box aria-label={"Thread Created Time"}
                  sx={{
@@ -106,10 +79,9 @@ export default function ThreadComponent(t: Readonly<Thread>) {
                    gap: { xs: "0.4rem", sm: "0.5rem" },
                    alignItems: "center",
                  }}>
-              <div>
-                <ListItemText secondary={" on " + formattedCreatedTime}
-                              sx={{ fontSize: { xs: "0.5rem", sm: "body2" } }} />
-              </div>
+              <UserContentTimestamp
+                createdTimestamp={t.created_time}
+                updatedTimestamp={t.updated_time} />
             </Box>
           </Box>
           <Box aria-label={"Thread Tags and Comments"}
@@ -118,26 +90,27 @@ export default function ThreadComponent(t: Readonly<Thread>) {
                  flexWrap: "nowrap",
                  justifyContent: "space-between",
                  gap: "1rem",
-                 alignItems: "flex-end",
+                 maxWidth: "100%",
                }}>
             <Box aria-label={"Thread Tags"}
                  sx={{
-                   display: "inline-flex",
+                   display: "flex",
                    gap: "1rem",
-                   flexWrap: "wrap",
+                   overflow: "scroll",
                    mt: 2,
                  }}>
               {t.tags.map((tag) => (
-                <Chip key={t.id + tag} label={tag} onClick={() => handleChipClick(tag)} />
+                <ThreadTag key={t.id + tag} tag={tag} />
               ))}
             </Box>
             <Box aria-label={"Thread Comments"}
                  sx={{
                    display: "inline-flex",
                    gap: "1rem",
-                   flexWrap: "wrap",
+                   flexWrap: "nowrap",
                    mt: 2,
                    alignItems: "right",
+                   flexShrink: 0,
                  }}>
               <Typography>{t.num_comments + " comments"}</Typography>
             </Box>
@@ -145,6 +118,5 @@ export default function ThreadComponent(t: Readonly<Thread>) {
         </Box>
       </Link>
     </Box>
-
   );
 }
