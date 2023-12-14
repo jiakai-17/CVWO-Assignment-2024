@@ -7,7 +7,7 @@ export const SampleThreads: Thread[] = [
     body: "Sample Content 1",
     creator: "user1",
     created_time: new Date("2021-10-17T15:00:00.000Z"),
-    updated_time: new Date("2021-10-17T15:00:00.000Z"),
+    updated_time: new Date("2021-10-18T15:00:00.000Z"),
     num_comments: 0,
     tags: ["tag1", "tag2"],
   },

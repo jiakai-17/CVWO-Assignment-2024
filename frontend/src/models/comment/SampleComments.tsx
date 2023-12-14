@@ -14,7 +14,7 @@ export const SampleComments: Comment[] = [
     body: "Sample Comment 2",
     creator: "user2",
     created_time: new Date("2022-10-17T15:00:00.000Z"),
-    updated_time: new Date("2022-10-17T15:00:00.000Z"),
+    updated_time: new Date("2022-10-18T15:00:00.000Z"),
     thread_id: "2",
   },
   {
@@ -31,7 +31,7 @@ export const SampleComments: Comment[] = [
       " profits. This challenge was especially meaningful to us because of its mission. We were honored to be a part of something that could ultimately help millions of people from all parts of the world.\”",
     creator: "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww",
     created_time: new Date("2023-10-17T15:00:00.000Z"),
-    updated_time: new Date("2023-10-17T15:00:00.000Z"),
+    updated_time: new Date("2023-10-19T15:00:00.000Z"),
     thread_id: "4",
   },
 ];
