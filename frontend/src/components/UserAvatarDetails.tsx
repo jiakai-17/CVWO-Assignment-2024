@@ -1,3 +1,5 @@
+"use client";
+
 import Avatar from "@mui/material/Avatar";
 import { toSvg } from "jdenticon";
 import { ListItemText } from "@mui/material";

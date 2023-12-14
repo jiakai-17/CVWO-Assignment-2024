@@ -1,3 +1,5 @@
+"use client";
+
 import { Chip } from "@mui/material";
 import Link from "next/link";
 

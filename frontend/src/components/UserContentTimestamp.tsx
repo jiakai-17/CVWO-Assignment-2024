@@ -1,3 +1,5 @@
+"use client";
+
 import { ListItemText, Tooltip } from "@mui/material";
 
 export default function UserContentTimestamp(props: Readonly<{
