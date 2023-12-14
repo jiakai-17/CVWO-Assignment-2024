@@ -6,6 +6,7 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import UserAvatarDetails from "@/components/UserAvatarDetails";
 
 export default function Navbar() {
 
@@ -40,9 +41,18 @@ export default function Navbar() {
             </Link>
           </Box>
           <div style={{ flexGrow: 1 }} />
-          {!isLogin && <Button color="inherit">
-            Signup
-          </Button>}
+          {!isLogin &&
+            <Button color="inherit">
+              Signup
+            </Button>
+          }
+          {isLogin &&
+            <Box sx={{ display: "flex", gap: 1, alignItems: "center", mr: 2 }}>
+              <Typography sx={{ color: "white" }}>
+                Welcome, </Typography>
+              <UserAvatarDetails creator={"guest"} textColor={"white"} fontSize={"1rem"} />
+            </Box>
+          }
           <Button color="inherit" onClick={handleLoginToggle} sx={{ ml: 2 }}>
             {isLogin ? "Logout" : "Login"}
           </Button>
