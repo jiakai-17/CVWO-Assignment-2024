@@ -3,6 +3,7 @@ package main
 import (
 	"backend/debug"
 	"backend/handlers/comments"
+	"backend/handlers/threads"
 	"backend/handlers/user"
 	"log"
 
@@ -29,6 +30,12 @@ func main() {
 	http.HandleFunc("/api/v1/createComment", comments.CreateComment)
 	http.HandleFunc("/api/v1/updateComment", comments.UpdateComment)
 	http.HandleFunc("/api/v1/deleteComment", comments.DeleteComment)
+
+	// Threads
+	http.HandleFunc("/api/v1/getThread", threads.GetThread)
+	http.HandleFunc("/api/v1/createThread", threads.CreateThread)
+	http.HandleFunc("/api/v1/updateThread", threads.DeleteThread)
+	http.HandleFunc("/api/v1/deleteThread", threads.DeleteThread)
 
 	log.Fatal(http.ListenAndServe(":9090", nil))
 }
