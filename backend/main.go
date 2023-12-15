@@ -37,5 +37,8 @@ func main() {
 	http.HandleFunc("/api/v1/updateThread", threads.DeleteThread)
 	http.HandleFunc("/api/v1/deleteThread", threads.DeleteThread)
 
+	// Search Threads
+	http.HandleFunc("/api/v1/searchThread", threads.SearchThread)
+
 	log.Fatal(http.ListenAndServe(":9090", nil))
 }
