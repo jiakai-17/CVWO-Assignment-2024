@@ -21,28 +21,68 @@ type AddThreadTagParams struct {
 	TagName  string
 }
 
+// Adds a tag to the thread.
 func (q *Queries) AddThreadTag(ctx context.Context, arg AddThreadTagParams) error {
 	_, err := q.db.Exec(ctx, addThreadTag, arg.ThreadID, arg.TagName)
 	return err
 }
 
-const checkUserExists = `-- name: CheckUserExists :one
-
-SELECT 1
-FROM users
-WHERE username = $1
+const checkCommentCreator = `-- name: CheckCommentCreator :one
+SELECT EXISTS
+    (SELECT 1 FROM comments WHERE id = $1 AND creator = $2)
+AS is_comment_creator
 `
 
-// ----- USER QUERIES -----
-func (q *Queries) CheckUserExists(ctx context.Context, username string) (int32, error) {
+type CheckCommentCreatorParams struct {
+	ID      pgtype.UUID
+	Creator string
+}
+
+// Checks if a user is the creator of a comment.
+func (q *Queries) CheckCommentCreator(ctx context.Context, arg CheckCommentCreatorParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkCommentCreator, arg.ID, arg.Creator)
+	var is_comment_creator bool
+	err := row.Scan(&is_comment_creator)
+	return is_comment_creator, err
+}
+
+const checkThreadCreator = `-- name: CheckThreadCreator :one
+SELECT EXISTS
+    (SELECT 1 FROM threads WHERE id = $1 AND creator = $2)
+AS is_thread_creator
+`
+
+type CheckThreadCreatorParams struct {
+	ID      pgtype.UUID
+	Creator string
+}
+
+// Checks if a user is the creator of a thread.
+func (q *Queries) CheckThreadCreator(ctx context.Context, arg CheckThreadCreatorParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkThreadCreator, arg.ID, arg.Creator)
+	var is_thread_creator bool
+	err := row.Scan(&is_thread_creator)
+	return is_thread_creator, err
+}
+
+const checkUserExists = `-- name: CheckUserExists :one
+
+SELECT EXISTS
+    (SELECT 1 FROM users WHERE username = $1)
+AS is_existing_user
+`
+
+// Queries for sqlc to generate Go code.
+// docker run --rm -v "%cd%:/src" -w /src sqlc/sqlc generate
+// Returns 1 if the user with the given username exists.
+func (q *Queries) CheckUserExists(ctx context.Context, username string) (bool, error) {
 	row := q.db.QueryRow(ctx, checkUserExists, username)
-	var column_1 int32
-	err := row.Scan(&column_1)
-	return column_1, err
+	var is_existing_user bool
+	err := row.Scan(&is_existing_user)
+	return is_existing_user, err
 }
 
 const createComment = `-- name: CreateComment :one
-
 INSERT INTO comments (body, creator, thread_id)
 VALUES ($1, $2, $3)
 RETURNING id, body, creator, thread_id, created_time, updated_time
@@ -54,7 +94,7 @@ type CreateCommentParams struct {
 	ThreadID pgtype.UUID
 }
 
-// ----- COMMENT QUERIES -----
+// Creates a new comment with the given body, creator, and thread_id. Returns the details of the created comment.
 func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (Comment, error) {
 	row := q.db.QueryRow(ctx, createComment, arg.Body, arg.Creator, arg.ThreadID)
 	var i Comment
@@ -70,7 +110,6 @@ func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (C
 }
 
 const createThread = `-- name: CreateThread :one
-
 INSERT INTO threads (title, body, creator)
 VALUES ($1, $2, $3)
 RETURNING id, title, body, creator, created_time, updated_time, num_comments
@@ -82,7 +121,7 @@ type CreateThreadParams struct {
 	Creator string
 }
 
-// ----- THREAD QUERIES -----
+// Creates a new thread with the given title, body, and creator. Returns the details of the created thread.
 func (q *Queries) CreateThread(ctx context.Context, arg CreateThreadParams) (Thread, error) {
 	row := q.db.QueryRow(ctx, createThread, arg.Title, arg.Body, arg.Creator)
 	var i Thread
@@ -108,6 +147,7 @@ type CreateUserParams struct {
 	Password string
 }
 
+// Creates a new user with the given username and password.
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 	_, err := q.db.Exec(ctx, createUser, arg.Username, arg.Password)
 	return err
@@ -116,26 +156,41 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 const deleteComment = `-- name: DeleteComment :exec
 DELETE FROM comments
 WHERE id = $1
+AND creator = $2
 `
 
-func (q *Queries) DeleteComment(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteComment, id)
+type DeleteCommentParams struct {
+	ID      pgtype.UUID
+	Creator string
+}
+
+// Deletes the comment with the given id.
+func (q *Queries) DeleteComment(ctx context.Context, arg DeleteCommentParams) error {
+	_, err := q.db.Exec(ctx, deleteComment, arg.ID, arg.Creator)
 	return err
 }
 
 const deleteThread = `-- name: DeleteThread :exec
 DELETE FROM threads
 WHERE id = $1
+AND creator = $2
 `
 
-func (q *Queries) DeleteThread(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteThread, id)
+type DeleteThreadParams struct {
+	ID      pgtype.UUID
+	Creator string
+}
+
+// Deletes the thread with the given id.
+func (q *Queries) DeleteThread(ctx context.Context, arg DeleteThreadParams) error {
+	_, err := q.db.Exec(ctx, deleteThread, arg.ID, arg.Creator)
 	return err
 }
 
 const deleteThreadTag = `-- name: DeleteThreadTag :exec
 DELETE FROM thread_tags
-WHERE thread_id = $1 AND tag_name = $2
+WHERE thread_id = $1
+AND tag_name = $2
 `
 
 type DeleteThreadTagParams struct {
@@ -143,6 +198,7 @@ type DeleteThreadTagParams struct {
 	TagName  string
 }
 
+// Removes the tag from the thread.
 func (q *Queries) DeleteThreadTag(ctx context.Context, arg DeleteThreadTagParams) error {
 	_, err := q.db.Exec(ctx, deleteThreadTag, arg.ThreadID, arg.TagName)
 	return err
@@ -153,25 +209,27 @@ SELECT id, body, creator, thread_id, created_time, updated_time
 FROM comments
 WHERE thread_id = $1
 ORDER BY
-    CASE WHEN $2 = 'created_time_asc' THEN created_time END ASC,
-    CASE WHEN $2 = 'created_time_desc' THEN created_time END DESC
-LIMIT $3
-OFFSET $4
+    CASE WHEN $4::text = 'created_time_asc' THEN created_time END ASC,
+    CASE WHEN $4::text = 'created_time_desc' THEN created_time END DESC
+LIMIT $2
+OFFSET $3
 `
 
 type GetCommentsParams struct {
-	ThreadID pgtype.UUID
-	Column2  interface{}
-	Limit    int32
-	Offset   int32
+	ThreadID  pgtype.UUID
+	Limit     int32
+	Offset    int32
+	Sortorder string
 }
 
+// Get comments for a thread.
+// Sort order should be one of 'created_time_asc', 'created_time_desc'.
 func (q *Queries) GetComments(ctx context.Context, arg GetCommentsParams) ([]Comment, error) {
 	rows, err := q.db.Query(ctx, getComments,
 		arg.ThreadID,
-		arg.Column2,
 		arg.Limit,
 		arg.Offset,
+		arg.Sortorder,
 	)
 	if err != nil {
 		return nil, err
@@ -204,6 +262,7 @@ FROM users
 WHERE username = $1
 `
 
+// Returns a user's password hash.
 func (q *Queries) GetPasswordHash(ctx context.Context, username string) (string, error) {
 	row := q.db.QueryRow(ctx, getPasswordHash, username)
 	var password string
@@ -212,14 +271,32 @@ func (q *Queries) GetPasswordHash(ctx context.Context, username string) (string,
 }
 
 const getThreadDetails = `-- name: GetThreadDetails :one
-SELECT id, title, body, creator, created_time, updated_time, num_comments
-FROM threads
-WHERE id = $1
+SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
+    CASE
+    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+        ELSE '{}'::text[]
+    END AS tags
+FROM threads t
+LEFT JOIN thread_tags tt ON t.id = tt.thread_id
+WHERE t.id = $1
+GROUP BY t.id
 `
 
-func (q *Queries) GetThreadDetails(ctx context.Context, id pgtype.UUID) (Thread, error) {
+type GetThreadDetailsRow struct {
+	ID          pgtype.UUID
+	Title       string
+	Body        string
+	Creator     string
+	CreatedTime pgtype.Timestamptz
+	UpdatedTime pgtype.Timestamptz
+	NumComments int32
+	Tags        []string
+}
+
+// Returns the details of the thread with the given id, as well as the tags of the thread as an array.
+func (q *Queries) GetThreadDetails(ctx context.Context, id pgtype.UUID) (GetThreadDetailsRow, error) {
 	row := q.db.QueryRow(ctx, getThreadDetails, id)
-	var i Thread
+	var i GetThreadDetailsRow
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
@@ -228,6 +305,7 @@ func (q *Queries) GetThreadDetails(ctx context.Context, id pgtype.UUID) (Thread,
 		&i.CreatedTime,
 		&i.UpdatedTime,
 		&i.NumComments,
+		&i.Tags,
 	)
 	return i, err
 }
@@ -238,6 +316,7 @@ FROM thread_tags
 WHERE thread_id = $1
 `
 
+// Returns the tags of the thread with the given id.
 func (q *Queries) GetThreadTags(ctx context.Context, threadID pgtype.UUID) ([]string, error) {
 	rows, err := q.db.Query(ctx, getThreadTags, threadID)
 	if err != nil {
@@ -259,32 +338,51 @@ func (q *Queries) GetThreadTags(ctx context.Context, threadID pgtype.UUID) ([]st
 }
 
 const getThreads = `-- name: GetThreads :many
-SELECT id, title, body, creator, created_time, updated_time, num_comments
-FROM threads
+SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
+    CASE
+    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+        ELSE '{}'::text[]
+    END AS tags
+FROM threads t
+LEFT JOIN thread_tags tt ON t.id = tt.thread_id
+GROUP BY t.id
 ORDER BY
-    CASE WHEN $1 = 'created_time_asc' THEN created_time END ASC,
-    CASE WHEN $1 = 'created_time_desc' THEN created_time END DESC,
-    CASE WHEN $1 = 'num_comments_asc' THEN num_comments END ASC,
-    CASE WHEN $1 = 'num_comments_desc' THEN num_comments END DESC
-LIMIT $2
-OFFSET $3
+    CASE WHEN $3::text = 'created_time_asc' THEN created_time END ASC,
+    CASE WHEN $3::text = 'created_time_desc' THEN created_time END DESC,
+    CASE WHEN $3::text = 'num_comments_asc' THEN num_comments END ASC,
+    CASE WHEN $3::text = 'num_comments_desc' THEN num_comments END DESC
+LIMIT $1
+OFFSET $2
 `
 
 type GetThreadsParams struct {
-	Column1 interface{}
-	Limit   int32
-	Offset  int32
+	Limit     int32
+	Offset    int32
+	Sortorder string
 }
 
-func (q *Queries) GetThreads(ctx context.Context, arg GetThreadsParams) ([]Thread, error) {
-	rows, err := q.db.Query(ctx, getThreads, arg.Column1, arg.Limit, arg.Offset)
+type GetThreadsRow struct {
+	ID          pgtype.UUID
+	Title       string
+	Body        string
+	Creator     string
+	CreatedTime pgtype.Timestamptz
+	UpdatedTime pgtype.Timestamptz
+	NumComments int32
+	Tags        []string
+}
+
+// Returns the details of all threads.
+// Sort order should be one of 'created_time_asc', 'created_time_desc', 'num_comments_asc', 'num_comments_desc'.
+func (q *Queries) GetThreads(ctx context.Context, arg GetThreadsParams) ([]GetThreadsRow, error) {
+	rows, err := q.db.Query(ctx, getThreads, arg.Limit, arg.Offset, arg.Sortorder)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Thread
+	var items []GetThreadsRow
 	for rows.Next() {
-		var i Thread
+		var i GetThreadsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
@@ -293,6 +391,7 @@ func (q *Queries) GetThreads(ctx context.Context, arg GetThreadsParams) ([]Threa
 			&i.CreatedTime,
 			&i.UpdatedTime,
 			&i.NumComments,
+			&i.Tags,
 		); err != nil {
 			return nil, err
 		}
@@ -305,40 +404,59 @@ func (q *Queries) GetThreads(ctx context.Context, arg GetThreadsParams) ([]Threa
 }
 
 const getThreadsByMultipleKeyword = `-- name: GetThreadsByMultipleKeyword :many
-SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments
+SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
+    CASE
+    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+        ELSE '{}'::text[]
+    END AS tags
 FROM threads t
-WHERE to_tsvector('simple', title || ' ' || body) @@ to_tsquery('simple', $1)
+LEFT JOIN thread_tags tt ON t.id = tt.thread_id
+WHERE to_tsvector('simple', t.title || ' ' || t.body) @@ to_tsquery('simple', $3::text)
+GROUP BY t.id
 ORDER BY
-    CASE WHEN $2 = 'created_time_asc' THEN created_time END ASC,
-    CASE WHEN $2 = 'created_time_desc' THEN created_time END DESC,
-    CASE WHEN $2 = 'num_comments_asc' THEN num_comments END ASC,
-    CASE WHEN $2 = 'num_comments_desc' THEN num_comments END DESC
-LIMIT $3
-OFFSET $4
+    CASE WHEN $4::text = 'created_time_asc' THEN created_time END ASC,
+    CASE WHEN $4::text = 'created_time_desc' THEN created_time END DESC,
+    CASE WHEN $4::text = 'num_comments_asc' THEN num_comments END ASC,
+    CASE WHEN $4::text = 'num_comments_desc' THEN num_comments END DESC
+LIMIT $1
+OFFSET $2
 `
 
 type GetThreadsByMultipleKeywordParams struct {
-	ToTsquery string
-	Column2   interface{}
 	Limit     int32
 	Offset    int32
+	Keywords  string
+	Sortorder string
 }
 
-// Join keywords with '&'
-func (q *Queries) GetThreadsByMultipleKeyword(ctx context.Context, arg GetThreadsByMultipleKeywordParams) ([]Thread, error) {
+type GetThreadsByMultipleKeywordRow struct {
+	ID          pgtype.UUID
+	Title       string
+	Body        string
+	Creator     string
+	CreatedTime pgtype.Timestamptz
+	UpdatedTime pgtype.Timestamptz
+	NumComments int32
+	Tags        []string
+}
+
+// Returns the details of threads that match all the given keywords.
+// Keywords should be a single string, with each word separated by &.
+// Sort order should be one of 'created_time_asc', 'created_time_desc', 'num_comments_asc', 'num_comments_desc'.
+func (q *Queries) GetThreadsByMultipleKeyword(ctx context.Context, arg GetThreadsByMultipleKeywordParams) ([]GetThreadsByMultipleKeywordRow, error) {
 	rows, err := q.db.Query(ctx, getThreadsByMultipleKeyword,
-		arg.ToTsquery,
-		arg.Column2,
 		arg.Limit,
 		arg.Offset,
+		arg.Keywords,
+		arg.Sortorder,
 	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Thread
+	var items []GetThreadsByMultipleKeywordRow
 	for rows.Next() {
-		var i Thread
+		var i GetThreadsByMultipleKeywordRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
@@ -347,6 +465,7 @@ func (q *Queries) GetThreadsByMultipleKeyword(ctx context.Context, arg GetThread
 			&i.CreatedTime,
 			&i.UpdatedTime,
 			&i.NumComments,
+			&i.Tags,
 		); err != nil {
 			return nil, err
 		}
@@ -359,44 +478,59 @@ func (q *Queries) GetThreadsByMultipleKeyword(ctx context.Context, arg GetThread
 }
 
 const getThreadsByMultipleTags = `-- name: GetThreadsByMultipleTags :many
-SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments
+SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
+    CASE
+    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+        ELSE '{}'::text[]
+    END AS tags
 FROM threads t
 INNER JOIN thread_tags tt ON t.id = tt.thread_id
-WHERE tt.tag_name IN ($1)
+WHERE tt.tag_name = ANY($3::text[])
 GROUP BY t.id
-HAVING COUNT(*) = $2
+HAVING COUNT(DISTINCT tt.tag_name) = array_length($3::text[], 1)
 ORDER BY
-    CASE WHEN $3 = 'created_time_asc' THEN created_time END ASC,
-    CASE WHEN $3 = 'created_time_desc' THEN created_time END DESC,
-    CASE WHEN $3 = 'num_comments_asc' THEN num_comments END ASC,
-    CASE WHEN $3 = 'num_comments_desc' THEN num_comments END DESC
-LIMIT $4
-OFFSET $5
+    CASE WHEN $4::text = 'created_time_asc' THEN t.created_time END ASC,
+    CASE WHEN $4::text = 'created_time_desc' THEN t.created_time END DESC,
+    CASE WHEN $4::text = 'num_comments_asc' THEN t.num_comments END ASC,
+    CASE WHEN $4::text = 'num_comments_desc' THEN t.num_comments END DESC
+LIMIT $1
+OFFSET $2
 `
 
 type GetThreadsByMultipleTagsParams struct {
-	TagName string
-	Column2 interface{}
-	Column3 interface{}
-	Limit   int32
-	Offset  int32
+	Limit     int32
+	Offset    int32
+	Tagarray  []string
+	Sortorder string
 }
 
-func (q *Queries) GetThreadsByMultipleTags(ctx context.Context, arg GetThreadsByMultipleTagsParams) ([]Thread, error) {
+type GetThreadsByMultipleTagsRow struct {
+	ID          pgtype.UUID
+	Title       string
+	Body        string
+	Creator     string
+	CreatedTime pgtype.Timestamptz
+	UpdatedTime pgtype.Timestamptz
+	NumComments int32
+	Tags        []string
+}
+
+// Returns the details of threads that match all the given tags.
+// Sort order should be one of 'created_time_asc', 'created_time_desc', 'num_comments_asc', 'num_comments_desc'.
+func (q *Queries) GetThreadsByMultipleTags(ctx context.Context, arg GetThreadsByMultipleTagsParams) ([]GetThreadsByMultipleTagsRow, error) {
 	rows, err := q.db.Query(ctx, getThreadsByMultipleTags,
-		arg.TagName,
-		arg.Column2,
-		arg.Column3,
 		arg.Limit,
 		arg.Offset,
+		arg.Tagarray,
+		arg.Sortorder,
 	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Thread
+	var items []GetThreadsByMultipleTagsRow
 	for rows.Next() {
-		var i Thread
+		var i GetThreadsByMultipleTagsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
@@ -405,6 +539,7 @@ func (q *Queries) GetThreadsByMultipleTags(ctx context.Context, arg GetThreadsBy
 			&i.CreatedTime,
 			&i.UpdatedTime,
 			&i.NumComments,
+			&i.Tags,
 		); err != nil {
 			return nil, err
 		}
@@ -416,43 +551,64 @@ func (q *Queries) GetThreadsByMultipleTags(ctx context.Context, arg GetThreadsBy
 	return items, nil
 }
 
-const getThreadsByMultipleTagsv2 = `-- name: GetThreadsByMultipleTagsv2 :many
-SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments
+const getThreadsByMultipleTagsAndKeyword = `-- name: GetThreadsByMultipleTagsAndKeyword :many
+SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
+    CASE
+    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+        ELSE '{}'::text[]
+    END AS tags
 FROM threads t
-INNER JOIN thread_tags tt ON t.id = tt.thread_id
-WHERE tt.tag_name = ANY($1)
+LEFT JOIN thread_tags tt ON t.id = tt.thread_id
+WHERE to_tsvector('simple', t.title || ' ' || t.body) @@ to_tsquery('simple', $3::text)
+AND tt.tag_name = ANY($4::text[])
 GROUP BY t.id
-HAVING COUNT(DISTINCT tt.tag_name) = array_length($1, 1)  -- Count the distinct tags to match all provided tags
+HAVING COUNT(DISTINCT tt.tag_name) = array_length($4::text[], 1)
 ORDER BY
-    CASE WHEN $2 = 'created_time_asc' THEN t.created_time END ASC,
-    CASE WHEN $2 = 'created_time_desc' THEN t.created_time END DESC,
-    CASE WHEN $2 = 'num_comments_asc' THEN t.num_comments END ASC,
-    CASE WHEN $2 = 'num_comments_desc' THEN t.num_comments END DESC
-LIMIT $3
-OFFSET $4
+    CASE WHEN $5::text = 'created_time_asc' THEN created_time END ASC,
+    CASE WHEN $5::text = 'created_time_desc' THEN created_time END DESC,
+    CASE WHEN $5::text = 'num_comments_asc' THEN num_comments END ASC,
+    CASE WHEN $5::text = 'num_comments_desc' THEN num_comments END DESC
+LIMIT $1
+OFFSET $2
 `
 
-type GetThreadsByMultipleTagsv2Params struct {
-	TagName []string
-	Column2 interface{}
-	Limit   int32
-	Offset  int32
+type GetThreadsByMultipleTagsAndKeywordParams struct {
+	Limit     int32
+	Offset    int32
+	Keywords  string
+	Tagarray  []string
+	Sortorder string
 }
 
-func (q *Queries) GetThreadsByMultipleTagsv2(ctx context.Context, arg GetThreadsByMultipleTagsv2Params) ([]Thread, error) {
-	rows, err := q.db.Query(ctx, getThreadsByMultipleTagsv2,
-		arg.TagName,
-		arg.Column2,
+type GetThreadsByMultipleTagsAndKeywordRow struct {
+	ID          pgtype.UUID
+	Title       string
+	Body        string
+	Creator     string
+	CreatedTime pgtype.Timestamptz
+	UpdatedTime pgtype.Timestamptz
+	NumComments int32
+	Tags        []string
+}
+
+// Returns the details of threads that match all the given tags and keywords.
+// Keywords should be a single string, with each word separated by &.
+// Sort order should be one of 'created_time_asc', 'created_time_desc', 'num_comments_asc', 'num_comments_desc'.
+func (q *Queries) GetThreadsByMultipleTagsAndKeyword(ctx context.Context, arg GetThreadsByMultipleTagsAndKeywordParams) ([]GetThreadsByMultipleTagsAndKeywordRow, error) {
+	rows, err := q.db.Query(ctx, getThreadsByMultipleTagsAndKeyword,
 		arg.Limit,
 		arg.Offset,
+		arg.Keywords,
+		arg.Tagarray,
+		arg.Sortorder,
 	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Thread
+	var items []GetThreadsByMultipleTagsAndKeywordRow
 	for rows.Next() {
-		var i Thread
+		var i GetThreadsByMultipleTagsAndKeywordRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
@@ -461,6 +617,7 @@ func (q *Queries) GetThreadsByMultipleTagsv2(ctx context.Context, arg GetThreads
 			&i.CreatedTime,
 			&i.UpdatedTime,
 			&i.NumComments,
+			&i.Tags,
 		); err != nil {
 			return nil, err
 		}
@@ -476,15 +633,18 @@ const updateComment = `-- name: UpdateComment :exec
 UPDATE comments
 SET body = $1, updated_time = NOW()
 WHERE id = $2
+AND creator = $3
 `
 
 type UpdateCommentParams struct {
-	Body string
-	ID   pgtype.UUID
+	Body    string
+	ID      pgtype.UUID
+	Creator string
 }
 
+// Updates the comment with the given id.
 func (q *Queries) UpdateComment(ctx context.Context, arg UpdateCommentParams) error {
-	_, err := q.db.Exec(ctx, updateComment, arg.Body, arg.ID)
+	_, err := q.db.Exec(ctx, updateComment, arg.Body, arg.ID, arg.Creator)
 	return err
 }
 
@@ -492,15 +652,23 @@ const updateThread = `-- name: UpdateThread :exec
 UPDATE threads
 SET title = $1, body = $2, updated_time = NOW()
 WHERE id = $3
+AND creator = $4
 `
 
 type UpdateThreadParams struct {
-	Title string
-	Body  string
-	ID    pgtype.UUID
+	Title   string
+	Body    string
+	ID      pgtype.UUID
+	Creator string
 }
 
+// Updates the thread with the given id.
 func (q *Queries) UpdateThread(ctx context.Context, arg UpdateThreadParams) error {
-	_, err := q.db.Exec(ctx, updateThread, arg.Title, arg.Body, arg.ID)
+	_, err := q.db.Exec(ctx, updateThread,
+		arg.Title,
+		arg.Body,
+		arg.ID,
+		arg.Creator,
+	)
 	return err
 }

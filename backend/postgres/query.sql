@@ -1,130 +1,211 @@
-------- USER QUERIES -----
+-- Queries for sqlc to generate Go code.
+-- docker run --rm -v "%cd%:/src" -w /src sqlc/sqlc generate
 
+-- Returns 1 if the user with the given username exists.
 -- name: CheckUserExists :one
-SELECT 1
-FROM users
-WHERE username = $1;
+SELECT EXISTS
+    (SELECT 1 FROM users WHERE username = $1)
+AS is_existing_user;
 
+
+-- Creates a new user with the given username and password.
 -- name: CreateUser :exec
 INSERT INTO users (username, password)
 VALUES ($1, $2);
 
+
+-- Returns a user's password hash.
 -- name: GetPasswordHash :one
 SELECT password
 FROM users
 WHERE username = $1;
 
-------- THREAD QUERIES -----
 
+-- Creates a new thread with the given title, body, and creator. Returns the details of the created thread.
 -- name: CreateThread :one
 INSERT INTO threads (title, body, creator)
 VALUES ($1, $2, $3)
 RETURNING id, title, body, creator, created_time, updated_time, num_comments;
 
+
+-- Returns the details of the thread with the given id, as well as the tags of the thread as an array.
 -- name: GetThreadDetails :one
-SELECT id, title, body, creator, created_time, updated_time, num_comments
-FROM threads
-WHERE id = $1;
+SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
+    CASE
+    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+        ELSE '{}'::text[]
+    END AS tags
+FROM threads t
+LEFT JOIN thread_tags tt ON t.id = tt.thread_id
+WHERE t.id = $1
+GROUP BY t.id;
 
+
+-- Returns the details of all threads.
+-- Sort order should be one of 'created_time_asc', 'created_time_desc', 'num_comments_asc', 'num_comments_desc'.
 -- name: GetThreads :many
-SELECT id, title, body, creator, created_time, updated_time, num_comments
-FROM threads
+SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
+    CASE
+    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+        ELSE '{}'::text[]
+    END AS tags
+FROM threads t
+LEFT JOIN thread_tags tt ON t.id = tt.thread_id
+GROUP BY t.id
 ORDER BY
-    CASE WHEN $1 = 'created_time_asc' THEN created_time END ASC,
-    CASE WHEN $1 = 'created_time_desc' THEN created_time END DESC,
-    CASE WHEN $1 = 'num_comments_asc' THEN num_comments END ASC,
-    CASE WHEN $1 = 'num_comments_desc' THEN num_comments END DESC
-LIMIT $2
-OFFSET $3;
+    CASE WHEN @sortOrder::text = 'created_time_asc' THEN created_time END ASC,
+    CASE WHEN @sortOrder::text = 'created_time_desc' THEN created_time END DESC,
+    CASE WHEN @sortOrder::text = 'num_comments_asc' THEN num_comments END ASC,
+    CASE WHEN @sortOrder::text = 'num_comments_desc' THEN num_comments END DESC
+LIMIT $1
+OFFSET $2;
 
+
+-- Checks if a user is the creator of a thread.
+-- name: CheckThreadCreator :one
+SELECT EXISTS
+    (SELECT 1 FROM threads WHERE id = $1 AND creator = $2)
+AS is_thread_creator;
+
+-- Updates the thread with the given id.
 -- name: UpdateThread :exec
 UPDATE threads
 SET title = $1, body = $2, updated_time = NOW()
-WHERE id = $3;
+WHERE id = $3
+AND creator = $4;
 
+
+-- Deletes the thread with the given id.
 -- name: DeleteThread :exec
 DELETE FROM threads
-WHERE id = $1;
+WHERE id = $1
+AND creator = $2;
 
+
+-- Returns the tags of the thread with the given id.
 -- name: GetThreadTags :many
 SELECT tag_name
 FROM thread_tags
 WHERE thread_id = $1;
 
+
+-- Adds a tag to the thread.
 -- name: AddThreadTag :exec
 INSERT INTO thread_tags (thread_id, tag_name)
 VALUES ($1, $2);
 
+
+-- Removes the tag from the thread.
 -- name: DeleteThreadTag :exec
 DELETE FROM thread_tags
-WHERE thread_id = $1 AND tag_name = $2;
+WHERE thread_id = $1
+AND tag_name = $2;
 
+
+-- Returns the details of threads that match all the given tags.
+-- Sort order should be one of 'created_time_asc', 'created_time_desc', 'num_comments_asc', 'num_comments_desc'.
 -- name: GetThreadsByMultipleTags :many
-SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments
+SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
+    CASE
+    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+        ELSE '{}'::text[]
+    END AS tags
 FROM threads t
 INNER JOIN thread_tags tt ON t.id = tt.thread_id
-WHERE tt.tag_name IN ($1)
+WHERE tt.tag_name = ANY(@tagArray::text[])
 GROUP BY t.id
-HAVING COUNT(*) = $2
+HAVING COUNT(DISTINCT tt.tag_name) = array_length(@tagArray::text[], 1)
 ORDER BY
-    CASE WHEN $3 = 'created_time_asc' THEN created_time END ASC,
-    CASE WHEN $3 = 'created_time_desc' THEN created_time END DESC,
-    CASE WHEN $3 = 'num_comments_asc' THEN num_comments END ASC,
-    CASE WHEN $3 = 'num_comments_desc' THEN num_comments END DESC
-LIMIT $4
-OFFSET $5;
+    CASE WHEN @sortOrder::text = 'created_time_asc' THEN t.created_time END ASC,
+    CASE WHEN @sortOrder::text = 'created_time_desc' THEN t.created_time END DESC,
+    CASE WHEN @sortOrder::text = 'num_comments_asc' THEN t.num_comments END ASC,
+    CASE WHEN @sortOrder::text = 'num_comments_desc' THEN t.num_comments END DESC
+LIMIT $1
+OFFSET $2;
 
--- name: GetThreadsByMultipleTagsv2 :many
-SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments
-FROM threads t
-INNER JOIN thread_tags tt ON t.id = tt.thread_id
-WHERE tt.tag_name = ANY($1)
-GROUP BY t.id
-HAVING COUNT(DISTINCT tt.tag_name) = array_length($1, 1)  -- Count the distinct tags to match all provided tags
-ORDER BY
-    CASE WHEN $2 = 'created_time_asc' THEN t.created_time END ASC,
-    CASE WHEN $2 = 'created_time_desc' THEN t.created_time END DESC,
-    CASE WHEN $2 = 'num_comments_asc' THEN t.num_comments END ASC,
-    CASE WHEN $2 = 'num_comments_desc' THEN t.num_comments END DESC
-LIMIT $3
-OFFSET $4;
 
+-- Returns the details of threads that match all the given keywords.
+-- Keywords should be a single string, with each word separated by &.
+-- Sort order should be one of 'created_time_asc', 'created_time_desc', 'num_comments_asc', 'num_comments_desc'.
 -- name: GetThreadsByMultipleKeyword :many
--- Join keywords with '&'
-SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments
+SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
+    CASE
+    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+        ELSE '{}'::text[]
+    END AS tags
 FROM threads t
-WHERE to_tsvector('simple', title || ' ' || body) @@ to_tsquery('simple', $1)
+LEFT JOIN thread_tags tt ON t.id = tt.thread_id
+WHERE to_tsvector('simple', t.title || ' ' || t.body) @@ to_tsquery('simple', @keywords::text)
+GROUP BY t.id
 ORDER BY
-    CASE WHEN $2 = 'created_time_asc' THEN created_time END ASC,
-    CASE WHEN $2 = 'created_time_desc' THEN created_time END DESC,
-    CASE WHEN $2 = 'num_comments_asc' THEN num_comments END ASC,
-    CASE WHEN $2 = 'num_comments_desc' THEN num_comments END DESC
-LIMIT $3
-OFFSET $4;
+    CASE WHEN @sortOrder::text = 'created_time_asc' THEN created_time END ASC,
+    CASE WHEN @sortOrder::text = 'created_time_desc' THEN created_time END DESC,
+    CASE WHEN @sortOrder::text = 'num_comments_asc' THEN num_comments END ASC,
+    CASE WHEN @sortOrder::text = 'num_comments_desc' THEN num_comments END DESC
+LIMIT $1
+OFFSET $2;
 
 
-------- COMMENT QUERIES -----
+-- Returns the details of threads that match all the given tags and keywords.
+-- Keywords should be a single string, with each word separated by &.
+-- Sort order should be one of 'created_time_asc', 'created_time_desc', 'num_comments_asc', 'num_comments_desc'.
+-- name: GetThreadsByMultipleTagsAndKeyword :many
+SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
+    CASE
+    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+        ELSE '{}'::text[]
+    END AS tags
+FROM threads t
+LEFT JOIN thread_tags tt ON t.id = tt.thread_id
+WHERE to_tsvector('simple', t.title || ' ' || t.body) @@ to_tsquery('simple', @keywords::text)
+AND tt.tag_name = ANY(@tagArray::text[])
+GROUP BY t.id
+HAVING COUNT(DISTINCT tt.tag_name) = array_length(@tagArray::text[], 1)
+ORDER BY
+    CASE WHEN @sortOrder::text = 'created_time_asc' THEN created_time END ASC,
+    CASE WHEN @sortOrder::text = 'created_time_desc' THEN created_time END DESC,
+    CASE WHEN @sortOrder::text = 'num_comments_asc' THEN num_comments END ASC,
+    CASE WHEN @sortOrder::text = 'num_comments_desc' THEN num_comments END DESC
+LIMIT $1
+OFFSET $2;
 
+
+-- Creates a new comment with the given body, creator, and thread_id. Returns the details of the created comment.
 -- name: CreateComment :one
 INSERT INTO comments (body, creator, thread_id)
 VALUES ($1, $2, $3)
 RETURNING id, body, creator, thread_id, created_time, updated_time;
 
+
+-- Get comments for a thread.
+-- Sort order should be one of 'created_time_asc', 'created_time_desc'.
 -- name: GetComments :many
 SELECT id, body, creator, thread_id, created_time, updated_time
 FROM comments
 WHERE thread_id = $1
 ORDER BY
-    CASE WHEN $2 = 'created_time_asc' THEN created_time END ASC,
-    CASE WHEN $2 = 'created_time_desc' THEN created_time END DESC
-LIMIT $3
-OFFSET $4;
+    CASE WHEN @sortOrder::text = 'created_time_asc' THEN created_time END ASC,
+    CASE WHEN @sortOrder::text = 'created_time_desc' THEN created_time END DESC
+LIMIT $2
+OFFSET $3;
 
+-- Checks if a user is the creator of a comment.
+-- name: CheckCommentCreator :one
+SELECT EXISTS
+    (SELECT 1 FROM comments WHERE id = $1 AND creator = $2)
+AS is_comment_creator;
+
+
+-- Updates the comment with the given id.
 -- name: UpdateComment :exec
 UPDATE comments
 SET body = $1, updated_time = NOW()
-WHERE id = $2;
+WHERE id = $2
+AND creator = $3;
 
+
+-- Deletes the comment with the given id.
 -- name: DeleteComment :exec
 DELETE FROM comments
-WHERE id = $1;
+WHERE id = $1
+AND creator = $2;
