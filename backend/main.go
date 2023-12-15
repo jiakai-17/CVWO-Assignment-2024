@@ -2,6 +2,7 @@ package main
 
 import (
 	"backend/debug"
+	"backend/handlers/user"
 	"log"
 
 	"net/http"
@@ -17,6 +18,10 @@ func main() {
 		http.HandleFunc("/api/v1/getToken", debug.GetToken)
 		http.HandleFunc("/api/v1/verifyToken", debug.VerifyToken)
 	}
+
+	// Authentication
+	http.HandleFunc("/api/v1/createAccount", user.CreateUser)
+	http.HandleFunc("/api/v1/login", user.LoginUser)
 
 	log.Fatal(http.ListenAndServe(":9090", nil))
 }
