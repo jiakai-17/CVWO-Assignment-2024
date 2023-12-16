@@ -12,7 +12,18 @@ import (
 	"strings"
 )
 
-// CreateUser Handles registration requests
+// CreateUser godoc
+// @Summary Handles registration requests
+// @Description Registers a new user with the given username and password
+// @Tags user
+// @Accept json
+// @Produce json
+// @Param username formData string true "Username"
+// @Param password formData string true "Password"
+// @Success 200 {object} AuthResponseJson
+// @Failure 400 "Username already exists"
+// @Failure 500
+// @Router /user/create [post]
 func CreateUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	// Only POST
 	if r.Method != http.MethodPost {

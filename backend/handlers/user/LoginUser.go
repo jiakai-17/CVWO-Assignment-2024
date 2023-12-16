@@ -12,7 +12,19 @@ import (
 	"strings"
 )
 
-// LoginUser Handles login requests
+// LoginUser godoc
+// @Summary Handles login requests
+// @Description Logs in a user with the given username and password
+// @Tags user
+// @Accept json
+// @Produce json
+// @Param username formData string true "Username"
+// @Param password formData string true "Password"
+// @Success 200 {object} AuthResponseJson
+// @Failure 400 "Username does not exist"
+// @Failure 401 "Incorrect password"
+// @Failure 500
+// @Router /user/login [post]
 func LoginUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	// Only POST
 	if r.Method != http.MethodPost {
