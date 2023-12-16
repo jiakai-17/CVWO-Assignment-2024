@@ -5,14 +5,15 @@ import (
 	"backend/utils"
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/crypto/bcrypt"
-	"log"
 	"net/http"
+	"strings"
 )
 
-// Handler for /api/v1/createAccount
-func CreateUser(w http.ResponseWriter, r *http.Request) {
+// CreateUser Handles registration requests
+func CreateUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	// Only POST
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -23,30 +24,25 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 
+	username = strings.TrimSpace(username)
+
+	utils.Log("CreateUser", "Username: "+username+", Password: "+password, nil)
+
 	// Connect to database
 	ctx := context.Background()
-
-	conn, err := pgx.Connect(ctx, "user=postgres dbname=cvwo-1 password=cs2102")
-	if err != nil {
-		log.Println("[ERROR] Unable to connect to database: ", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	defer conn.Close(ctx)
-
 	queries := tutorial.New(conn)
 
 	// Check if username exists
-	userExists, err := queries.CheckUserExists(ctx, username)
-	log.Println("exists: ", userExists)
+	isExistingUser, err := queries.CheckUserExists(ctx, username)
 
 	if err != nil {
-		log.Println("[ERROR] Unable to check if user exists: ", err)
+		utils.Log("CreateUser", "Unable to check if user exists: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	if userExists {
+	if isExistingUser {
+		utils.Log("CreateUser", "Username already exists: "+username, errors.New("username already exists"))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -54,18 +50,17 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	// Create user
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Println("[ERROR] Unable to hash password: ", err)
+		utils.Log("CreateUser", "Unable to hash password: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	params := tutorial.CreateUserParams{
-		Username: username,
-		Password: string(hashedPassword),
-	}
 
-	err = queries.CreateUser(ctx, params)
+	err = queries.CreateUser(ctx, tutorial.CreateUserParams{
+		Username: username,
+		Password: string(hashedPassword)})
+
 	if err != nil {
-		log.Println("[ERROR] Unable to create user: ", err)
+		utils.Log("CreateUser", "Unable to create user: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -73,20 +68,24 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	// Generate JWT token
 	token, err := utils.CreateJWT(username)
 	if err != nil {
-		log.Println("[ERROR] Unable to generate JWT token: ", err)
+		utils.Log("CreateUser", "Unable to generate JWT token: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// Return username and token as JSON object
 	w.Header().Set("Content-Type", "application/json")
-	jsonErr := json.NewEncoder(w).Encode(JwtJson{Username: username, Token: token})
+	jsonErr := json.NewEncoder(w).Encode(AuthResponseJson{
+		Username: username,
+		Token:    token})
 
 	if jsonErr != nil {
-		log.Println("[ERROR] Unable to encode JSON: ", err)
+		utils.Log("CreateUser", "Unable to encode JSON: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	utils.Log("CreateUser", "User created successfully: "+username, nil)
 
 	return
 }

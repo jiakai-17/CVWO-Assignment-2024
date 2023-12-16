@@ -5,14 +5,15 @@ import (
 	"backend/utils"
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/crypto/bcrypt"
-	"log"
 	"net/http"
+	"strings"
 )
 
-// Handler for /api/v1/login
-func LoginUser(w http.ResponseWriter, r *http.Request) {
+// LoginUser Handles login requests
+func LoginUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	// Only POST
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -23,65 +24,67 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 
+	username = strings.TrimSpace(username)
+
+	utils.Log("LoginUser", "Username: "+username+", Password: "+password, nil)
+
 	// Connect to database
 	ctx := context.Background()
-
-	conn, err := pgx.Connect(ctx, "user=postgres dbname=cvwo-1 password=cs2102")
-	if err != nil {
-		log.Println("[ERROR] Unable to connect to database: ", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	defer conn.Close(ctx)
-
 	queries := tutorial.New(conn)
 
 	// Check if username exists
-	userExists, err := queries.CheckUserExists(ctx, username)
-	log.Println("exists: ", userExists)
+	isExistingUser, err := queries.CheckUserExists(ctx, username)
+
 	if err != nil {
-		log.Println("[ERROR] Unable to check if user exists: ", err)
+		utils.Log("LoginUser", "Unable to check if user exists: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	if !userExists {
+	if !isExistingUser {
+		utils.Log("LoginUser", "Username does not exist: "+username, errors.New("username does not exist"))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// Check password
-	hashedPassword, err := queries.GetPasswordHash(ctx, username)
+	user, err := queries.GetPasswordHash(ctx, username)
 	if err != nil {
-		log.Println("[ERROR] Unable to get password hash: ", err)
+		utils.Log("LoginUser", "Unable to get password hash: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
+	hashedPassword := user.Password
+
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+
 	if err != nil {
-		log.Println("[ERROR] Incorrect password: ", err)
-		w.WriteHeader(http.StatusBadRequest)
+		utils.Log("LoginUser", "Incorrect password: ", err)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	// Generate JWT token
-	token, err := utils.CreateJWT(username)
+	token, err := utils.CreateJWT(user.Username)
 	if err != nil {
-		log.Println("[ERROR] Unable to generate JWT token: ", err)
+		utils.Log("LoginUser", "Unable to create JWT token: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	// Return username and token as JSON object
 	w.Header().Set("Content-Type", "application/json")
-	jsonErr := json.NewEncoder(w).Encode(JwtJson{Username: username, Token: token})
+	jsonErr := json.NewEncoder(w).Encode(AuthResponseJson{
+		Username: user.Username,
+		Token:    token})
 
 	if jsonErr != nil {
-		log.Println("[ERROR] Unable to encode JSON: ", err)
+		utils.Log("LoginUser", "Unable to encode JSON: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
+	utils.Log("LoginUser", "User logged in: "+user.Username, nil)
 	return
 }
