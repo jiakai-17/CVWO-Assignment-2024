@@ -21,6 +21,8 @@ func wrapDbConnection(
 	}
 }
 
+var BASE_PATH = "/api/v1/"
+
 // TODO: Remove this in prod, extract to env variable
 var IS_DEBUG = true
 
@@ -56,8 +58,8 @@ func main() {
 	}
 
 	// Authentication
-	http.HandleFunc("/api/v1/createAccount", wrapDbConnection(user.CreateUser, conn))
-	http.HandleFunc("/api/v1/login", wrapDbConnection(user.LoginUser, conn))
+	http.HandleFunc(BASE_PATH+"user/create", wrapDbConnection(user.CreateUser, conn))
+	http.HandleFunc(BASE_PATH+"user/login", wrapDbConnection(user.LoginUser, conn))
 
 	// Comments
 	http.HandleFunc("/api/v1/getComment", comments.GetComment)
