@@ -4,7 +4,7 @@
 -- Returns 1 if the user with the given username exists.
 -- name: CheckUserExists :one
 SELECT EXISTS
-    (SELECT 1 FROM users WHERE username = $1)
+    (SELECT 1 FROM users WHERE LOWER(username) = LOWER($1))
 AS is_existing_user;
 
 
@@ -16,9 +16,9 @@ VALUES ($1, $2);
 
 -- Returns a user's password hash.
 -- name: GetPasswordHash :one
-SELECT password
+SELECT username, password
 FROM users
-WHERE username = $1;
+WHERE LOWER(username) = LOWER($1);
 
 
 -- Creates a new thread with the given title, body, and creator. Returns the details of the created thread.
@@ -32,7 +32,7 @@ RETURNING id, title, body, creator, created_time, updated_time, num_comments;
 -- name: GetThreadDetails :one
 SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
     CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name)
         ELSE '{}'::text[]
     END AS tags
 FROM threads t
@@ -46,7 +46,7 @@ GROUP BY t.id;
 -- name: GetThreads :many
 SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
     CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name)
         ELSE '{}'::text[]
     END AS tags
 FROM threads t
@@ -107,14 +107,14 @@ AND tag_name = $2;
 -- name: GetThreadsByMultipleTags :many
 SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
     CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name)
         ELSE '{}'::text[]
     END AS tags
 FROM threads t
 INNER JOIN thread_tags tt ON t.id = tt.thread_id
 WHERE tt.tag_name = ANY(@tagArray::text[])
 GROUP BY t.id
-HAVING COUNT(DISTINCT tt.tag_name) = array_length(@tagArray::text[], 1)
+HAVING COUNT(DISTINCT tt.tag_name) = ARRAY_LENGTH(@tagArray::text[], 1)
 ORDER BY
     CASE WHEN @sortOrder::text = 'created_time_asc' THEN t.created_time END ASC,
     CASE WHEN @sortOrder::text = 'created_time_desc' THEN t.created_time END DESC,
@@ -130,12 +130,12 @@ OFFSET $2;
 -- name: GetThreadsByMultipleKeyword :many
 SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
     CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name)
         ELSE '{}'::text[]
     END AS tags
 FROM threads t
 LEFT JOIN thread_tags tt ON t.id = tt.thread_id
-WHERE to_tsvector('simple', t.title || ' ' || t.body) @@ to_tsquery('simple', @keywords::text)
+WHERE TO_TSVECTOR('simple', t.title || ' ' || t.body) @@ TO_TSQUERY('simple', @keywords::text)
 GROUP BY t.id
 ORDER BY
     CASE WHEN @sortOrder::text = 'created_time_asc' THEN created_time END ASC,
@@ -152,12 +152,12 @@ OFFSET $2;
 -- name: GetThreadsByMultipleTagsAndKeyword :many
 SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
     CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name)
         ELSE '{}'::text[]
     END AS tags
 FROM threads t
 LEFT JOIN thread_tags tt ON t.id = tt.thread_id
-WHERE to_tsvector('simple', t.title || ' ' || t.body) @@ to_tsquery('simple', @keywords::text)
+WHERE TO_TSVECTOR('simple', t.title || ' ' || t.body) @@ TO_TSQUERY('simple', @keywords::text)
 AND tt.tag_name = ANY(@tagArray::text[])
 GROUP BY t.id
 HAVING COUNT(DISTINCT tt.tag_name) = array_length(@tagArray::text[], 1)

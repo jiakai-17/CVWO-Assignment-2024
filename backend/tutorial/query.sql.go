@@ -68,15 +68,15 @@ func (q *Queries) CheckThreadCreator(ctx context.Context, arg CheckThreadCreator
 const checkUserExists = `-- name: CheckUserExists :one
 
 SELECT EXISTS
-    (SELECT 1 FROM users WHERE username = $1)
+    (SELECT 1 FROM users WHERE LOWER(username) = LOWER($1))
 AS is_existing_user
 `
 
 // Queries for sqlc to generate Go code.
 // docker run --rm -v "%cd%:/src" -w /src sqlc/sqlc generate
 // Returns 1 if the user with the given username exists.
-func (q *Queries) CheckUserExists(ctx context.Context, username string) (bool, error) {
-	row := q.db.QueryRow(ctx, checkUserExists, username)
+func (q *Queries) CheckUserExists(ctx context.Context, lower string) (bool, error) {
+	row := q.db.QueryRow(ctx, checkUserExists, lower)
 	var is_existing_user bool
 	err := row.Scan(&is_existing_user)
 	return is_existing_user, err
@@ -257,23 +257,23 @@ func (q *Queries) GetComments(ctx context.Context, arg GetCommentsParams) ([]Com
 }
 
 const getPasswordHash = `-- name: GetPasswordHash :one
-SELECT password
+SELECT username, password
 FROM users
-WHERE username = $1
+WHERE LOWER(username) = LOWER($1)
 `
 
 // Returns a user's password hash.
-func (q *Queries) GetPasswordHash(ctx context.Context, username string) (string, error) {
-	row := q.db.QueryRow(ctx, getPasswordHash, username)
-	var password string
-	err := row.Scan(&password)
-	return password, err
+func (q *Queries) GetPasswordHash(ctx context.Context, lower string) (User, error) {
+	row := q.db.QueryRow(ctx, getPasswordHash, lower)
+	var i User
+	err := row.Scan(&i.Username, &i.Password)
+	return i, err
 }
 
 const getThreadDetails = `-- name: GetThreadDetails :one
 SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
     CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name)
         ELSE '{}'::text[]
     END AS tags
 FROM threads t
@@ -340,7 +340,7 @@ func (q *Queries) GetThreadTags(ctx context.Context, threadID pgtype.UUID) ([]st
 const getThreads = `-- name: GetThreads :many
 SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
     CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name)
         ELSE '{}'::text[]
     END AS tags
 FROM threads t
@@ -406,12 +406,12 @@ func (q *Queries) GetThreads(ctx context.Context, arg GetThreadsParams) ([]GetTh
 const getThreadsByMultipleKeyword = `-- name: GetThreadsByMultipleKeyword :many
 SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
     CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name)
         ELSE '{}'::text[]
     END AS tags
 FROM threads t
 LEFT JOIN thread_tags tt ON t.id = tt.thread_id
-WHERE to_tsvector('simple', t.title || ' ' || t.body) @@ to_tsquery('simple', $3::text)
+WHERE TO_TSVECTOR('simple', t.title || ' ' || t.body) @@ TO_TSQUERY('simple', $3::text)
 GROUP BY t.id
 ORDER BY
     CASE WHEN $4::text = 'created_time_asc' THEN created_time END ASC,
@@ -480,14 +480,14 @@ func (q *Queries) GetThreadsByMultipleKeyword(ctx context.Context, arg GetThread
 const getThreadsByMultipleTags = `-- name: GetThreadsByMultipleTags :many
 SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
     CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name)
         ELSE '{}'::text[]
     END AS tags
 FROM threads t
 INNER JOIN thread_tags tt ON t.id = tt.thread_id
 WHERE tt.tag_name = ANY($3::text[])
 GROUP BY t.id
-HAVING COUNT(DISTINCT tt.tag_name) = array_length($3::text[], 1)
+HAVING COUNT(DISTINCT tt.tag_name) = ARRAY_LENGTH($3::text[], 1)
 ORDER BY
     CASE WHEN $4::text = 'created_time_asc' THEN t.created_time END ASC,
     CASE WHEN $4::text = 'created_time_desc' THEN t.created_time END DESC,
@@ -554,12 +554,12 @@ func (q *Queries) GetThreadsByMultipleTags(ctx context.Context, arg GetThreadsBy
 const getThreadsByMultipleTagsAndKeyword = `-- name: GetThreadsByMultipleTagsAndKeyword :many
 SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
     CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN array_agg(tt.tag_name)
+    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name)
         ELSE '{}'::text[]
     END AS tags
 FROM threads t
 LEFT JOIN thread_tags tt ON t.id = tt.thread_id
-WHERE to_tsvector('simple', t.title || ' ' || t.body) @@ to_tsquery('simple', $3::text)
+WHERE TO_TSVECTOR('simple', t.title || ' ' || t.body) @@ TO_TSQUERY('simple', $3::text)
 AND tt.tag_name = ANY($4::text[])
 GROUP BY t.id
 HAVING COUNT(DISTINCT tt.tag_name) = array_length($4::text[], 1)
