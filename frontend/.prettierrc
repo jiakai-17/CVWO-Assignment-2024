@@ -5,5 +5,10 @@
   "tabWidth": 2,
   "useTabs": false,
   "singleQuote": false,
-  "endOfLine": "lf"
+  "endOfLine": "lf",
+  "arrowParens": "always",
+  "singleAttributePerLine": true,
+  "plugins": [
+    "prettier-plugin-tailwindcss"
+  ]
 }
