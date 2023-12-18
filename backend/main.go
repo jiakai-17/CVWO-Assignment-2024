@@ -7,6 +7,7 @@ import (
 	"backend/handlers/user"
 	"backend/utils"
 	"context"
+	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5"
 	"log"
 	"net/http"
@@ -41,6 +42,8 @@ var IS_DEBUG = true
 // @description The word "Bearer", followed by a space, and then the JWT token.
 func main() {
 
+	r := mux.NewRouter()
+
 	// Connect to database
 	ctx := context.Background()
 	conn, err := pgx.Connect(ctx, "user=postgres dbname=cvwo-1 password=cs2102")
@@ -62,10 +65,10 @@ func main() {
 	http.HandleFunc(BASE_PATH+"user/login", wrapDbConnection(user.LoginUser, conn))
 
 	// Comments
-	http.HandleFunc("/api/v1/getComment", comments.GetComment)
-	http.HandleFunc("/api/v1/createComment", comments.CreateComment)
-	http.HandleFunc("/api/v1/updateComment", comments.UpdateComment)
-	http.HandleFunc("/api/v1/deleteComment", comments.DeleteComment)
+	r.HandleFunc(BASE_PATH+"thread/{thread_id}/comments", wrapDbConnection(comments.GetComment, conn)).Methods("GET")
+	http.HandleFunc(BASE_PATH+"comment/create", wrapDbConnection(comments.CreateComment, conn))
+	r.HandleFunc(BASE_PATH+"comment/{id}", wrapDbConnection(comments.UpdateComment, conn)).Methods("PUT")
+	r.HandleFunc(BASE_PATH+"comment/{id}", wrapDbConnection(comments.DeleteComment, conn)).Methods("DELETE")
 
 	// Threads
 	http.HandleFunc("/api/v1/getThread", threads.GetThread)
@@ -77,6 +80,7 @@ func main() {
 	http.HandleFunc("/api/v1/searchThread", threads.SearchThread)
 
 	// Start server
+	http.Handle("/", r)
 	utils.Log("main", "Listening on port 9090...", nil)
 	log.Fatal(http.ListenAndServe(":9090", nil))
 }
