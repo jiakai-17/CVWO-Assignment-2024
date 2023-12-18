@@ -4,6 +4,7 @@ import (
 	"backend/tutorial"
 	"context"
 	"encoding/json"
+	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"log"
@@ -12,10 +13,19 @@ import (
 	"strconv"
 )
 
-// GetComment Handler for /api/v1/getComment
-func GetComment(w http.ResponseWriter, r *http.Request) {
-	// Only POST
-	if r.Method != http.MethodPost {
+// GetComment godoc
+// @Summary Handles comment retrieval requests
+// @Description Retrieves comments for the given thread
+// @Tags comment
+// @Param thread_id path string true "Thread UUID"
+// @Param order query string false "Sorting order" Enums(created_time_asc, created_time_desc)
+// @Param page query string false "Page number"
+// @Success 200 "JSON array of comments"
+// @Failure 500
+// @Router /thread/{thread_id}/comments [get]
+func GetComment(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
+	// Only GET
+	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
@@ -24,7 +34,7 @@ func GetComment(w http.ResponseWriter, r *http.Request) {
 	size := 10
 
 	// Get details from request body
-	id := r.FormValue("id")
+	id := mux.Vars(r)["thread_id"]
 	order := r.FormValue("order")
 	page := r.FormValue("page")
 
@@ -46,15 +56,6 @@ func GetComment(w http.ResponseWriter, r *http.Request) {
 
 	// Connect to database
 	ctx := context.Background()
-
-	conn, err := pgx.Connect(ctx, "user=postgres dbname=cvwo-1 password=cs2102")
-	if err != nil {
-		log.Println("[ERROR] Unable to connect to database: ", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	defer conn.Close(ctx)
-
 	queries := tutorial.New(conn)
 
 	var threadUUID pgtype.UUID

@@ -4,23 +4,34 @@ import (
 	"backend/tutorial"
 	"backend/utils"
 	"context"
+	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"log"
 	"net/http"
 )
 
-// UpdateComment Handler for /api/v1/updateComment
-func UpdateComment(w http.ResponseWriter, r *http.Request) {
-	// Only POST
-	if r.Method != http.MethodPost {
+// UpdateComment godoc
+// @Summary Handles comment update requests
+// @Description Updates a comment
+// @Tags comment
+// @Param id path string true "Comment UUID"
+// @Param body formData string true "Comment body"
+// @Success 200
+// @Failure 401 "Invalid JWT token"
+// @Failure 403 "User is not the creator of the comment"
+// @Failure 500
+// @Router /comment/{id} [put]
+func UpdateComment(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
+	// Only PUT
+	if r.Method != http.MethodPut {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	// Get details from request body
-	commentId := r.FormValue("id")
-	username := r.FormValue("username")
+	commentId := mux.Vars(r)["id"]
+	utils.Log("updateComment", "[DEBUG] Comment ID: "+commentId, nil)
 	body := r.FormValue("body")
 
 	// Get JWT token from request header
@@ -34,23 +45,14 @@ func UpdateComment(w http.ResponseWriter, r *http.Request) {
 	// Verify token
 	verifiedUsername, err := utils.VerifyJWT(token)
 
-	if err != nil || verifiedUsername != username {
-		log.Println("[ERROR] Unable to verify JWT token: ", err, verifiedUsername, username)
+	if err != nil {
+		log.Println("[ERROR] Unable to verify JWT token: ", err, verifiedUsername)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	// Connect to database
 	ctx := context.Background()
-
-	conn, err := pgx.Connect(ctx, "user=postgres dbname=cvwo-1 password=cs2102")
-	if err != nil {
-		log.Println("[ERROR] Unable to connect to database: ", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	defer conn.Close(ctx)
-
 	queries := tutorial.New(conn)
 
 	// Create comment UUID for pg
@@ -59,7 +61,7 @@ func UpdateComment(w http.ResponseWriter, r *http.Request) {
 	commentUUID.Scan(commentId)
 
 	// Check if the user is the creator of the comment
-	isCreator, err := queries.CheckCommentCreator(ctx, tutorial.CheckCommentCreatorParams{Creator: username,
+	isCreator, err := queries.CheckCommentCreator(ctx, tutorial.CheckCommentCreatorParams{Creator: verifiedUsername,
 		ID: commentUUID})
 
 	if err != nil || !isCreator {
@@ -71,7 +73,7 @@ func UpdateComment(w http.ResponseWriter, r *http.Request) {
 	// Update the comment
 	err = queries.UpdateComment(ctx, tutorial.UpdateCommentParams{
 		Body:    body,
-		Creator: username,
+		Creator: verifiedUsername,
 		ID:      commentUUID,
 	})
 

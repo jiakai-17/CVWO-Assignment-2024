@@ -11,8 +11,20 @@ import (
 	"net/http"
 )
 
-// CreateComment Handler for /api/v1/createComment
-func CreateComment(w http.ResponseWriter, r *http.Request) {
+// CreateComment godoc
+// @Summary Handles comment creation requests
+// @Description Creates a new comment for the given thread
+// @Tags comment
+// @Accept json
+// @Produce json
+// @Param username formData string true "Username"
+// @Param thread formData string true "Thread UUID"
+// @Param body formData string true "Comment body"
+// @Success 200 "JSON of Created comment"
+// @Failure 401 "Invalid JWT token"
+// @Failure 500
+// @Router /comment/create [post]
+func CreateComment(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	// Only POST
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -20,7 +32,6 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get details from request body
-	username := r.FormValue("username")
 	thread := r.FormValue("thread")
 	body := r.FormValue("body")
 
@@ -35,23 +46,14 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 	// Verify token
 	verifiedUsername, err := utils.VerifyJWT(token)
 
-	if err != nil || verifiedUsername != username {
-		log.Println("[ERROR] Unable to verify JWT token: ", err, verifiedUsername, username)
+	if err != nil {
+		log.Println("[ERROR] Unable to verify JWT token: ", err, verifiedUsername)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	// Connect to database
 	ctx := context.Background()
-
-	conn, err := pgx.Connect(ctx, "user=postgres dbname=cvwo-1 password=cs2102")
-	if err != nil {
-		log.Println("[ERROR] Unable to connect to database: ", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	defer conn.Close(ctx)
-
 	queries := tutorial.New(conn)
 
 	// Create thread UUID for pg
@@ -62,7 +64,7 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 	// Create the comment
 	params := tutorial.CreateCommentParams{
 		Body:     body,
-		Creator:  username,
+		Creator:  verifiedUsername,
 		ThreadID: threadID,
 	}
 
