@@ -18,6 +18,166 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/comment/create": {
+            "post": {
+                "description": "Creates a new comment for the given thread",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "comment"
+                ],
+                "summary": "Handles comment creation requests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username",
+                        "name": "username",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Thread UUID",
+                        "name": "thread",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comment body",
+                        "name": "body",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JSON of Created comment"
+                    },
+                    "401": {
+                        "description": "Invalid JWT token"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/comment/{id}": {
+            "put": {
+                "description": "Updates a comment",
+                "tags": [
+                    "comment"
+                ],
+                "summary": "Handles comment update requests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Comment UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comment body",
+                        "name": "body",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "Invalid JWT token"
+                    },
+                    "403": {
+                        "description": "User is not the creator of the comment"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            },
+            "delete": {
+                "description": "Deletes a comment",
+                "tags": [
+                    "comment"
+                ],
+                "summary": "Handles comment deletion requests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Comment UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "Invalid JWT token"
+                    },
+                    "403": {
+                        "description": "User is not the creator of the comment"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/thread/{thread_id}/comments": {
+            "get": {
+                "description": "Retrieves comments for the given thread",
+                "tags": [
+                    "comment"
+                ],
+                "summary": "Handles comment retrieval requests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Thread UUID",
+                        "name": "thread_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "created_time_asc",
+                            "created_time_desc"
+                        ],
+                        "type": "string",
+                        "description": "Sorting order",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JSON array of comments"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
         "/user/create": {
             "post": {
                 "description": "Registers a new user with the given username and password",

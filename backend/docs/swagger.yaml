@@ -16,6 +16,113 @@ info:
   title: CVWO Forum Backend API
   version: "1.0"
 paths:
+  /comment/{id}:
+    delete:
+      description: Deletes a comment
+      parameters:
+      - description: Comment UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Invalid JWT token
+        "403":
+          description: User is not the creator of the comment
+        "500":
+          description: Internal Server Error
+      summary: Handles comment deletion requests
+      tags:
+      - comment
+    put:
+      description: Updates a comment
+      parameters:
+      - description: Comment UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Comment body
+        in: formData
+        name: body
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Invalid JWT token
+        "403":
+          description: User is not the creator of the comment
+        "500":
+          description: Internal Server Error
+      summary: Handles comment update requests
+      tags:
+      - comment
+  /comment/create:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new comment for the given thread
+      parameters:
+      - description: Username
+        in: formData
+        name: username
+        required: true
+        type: string
+      - description: Thread UUID
+        in: formData
+        name: thread
+        required: true
+        type: string
+      - description: Comment body
+        in: formData
+        name: body
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: JSON of Created comment
+        "401":
+          description: Invalid JWT token
+        "500":
+          description: Internal Server Error
+      summary: Handles comment creation requests
+      tags:
+      - comment
+  /thread/{thread_id}/comments:
+    get:
+      description: Retrieves comments for the given thread
+      parameters:
+      - description: Thread UUID
+        in: path
+        name: thread_id
+        required: true
+        type: string
+      - description: Sorting order
+        enum:
+        - created_time_asc
+        - created_time_desc
+        in: query
+        name: order
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: string
+      responses:
+        "200":
+          description: JSON array of comments
+        "500":
+          description: Internal Server Error
+      summary: Handles comment retrieval requests
+      tags:
+      - comment
   /user/create:
     post:
       consumes:
