@@ -9,34 +9,34 @@ import (
 )
 
 type Comment struct {
-	ID          pgtype.UUID
-	Body        string
-	Creator     string
-	ThreadID    pgtype.UUID
-	CreatedTime pgtype.Timestamptz
-	UpdatedTime pgtype.Timestamptz
+	ID          pgtype.UUID        `json:"id"`
+	Body        string             `json:"body"`
+	Creator     string             `json:"creator"`
+	ThreadID    pgtype.UUID        `json:"thread_id"`
+	CreatedTime pgtype.Timestamptz `json:"created_time"`
+	UpdatedTime pgtype.Timestamptz `json:"updated_time"`
 }
 
 type Tag struct {
-	Name string
+	Name string `json:"name"`
 }
 
 type Thread struct {
-	ID          pgtype.UUID
-	Title       string
-	Body        string
-	Creator     string
-	CreatedTime pgtype.Timestamptz
-	UpdatedTime pgtype.Timestamptz
-	NumComments int32
+	ID          pgtype.UUID        `json:"id"`
+	Title       string             `json:"title"`
+	Body        string             `json:"body"`
+	Creator     string             `json:"creator"`
+	CreatedTime pgtype.Timestamptz `json:"created_time"`
+	UpdatedTime pgtype.Timestamptz `json:"updated_time"`
+	NumComments int32              `json:"num_comments"`
 }
 
 type ThreadTag struct {
-	ThreadID pgtype.UUID
-	TagName  string
+	ThreadID pgtype.UUID `json:"thread_id"`
+	TagName  string      `json:"tag_name"`
 }
 
 type User struct {
-	Username string
-	Password string
+	Username string `json:"username"`
+	Password string `json:"password"`
 }

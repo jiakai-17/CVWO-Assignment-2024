@@ -17,8 +17,8 @@ VALUES ($1, $2)
 `
 
 type AddThreadTagParams struct {
-	ThreadID pgtype.UUID
-	TagName  string
+	ThreadID pgtype.UUID `json:"thread_id"`
+	TagName  string      `json:"tag_name"`
 }
 
 // Adds a tag to the thread.
@@ -34,8 +34,8 @@ AS is_comment_creator
 `
 
 type CheckCommentCreatorParams struct {
-	ID      pgtype.UUID
-	Creator string
+	ID      pgtype.UUID `json:"id"`
+	Creator string      `json:"creator"`
 }
 
 // Checks if a user is the creator of a comment.
@@ -53,8 +53,8 @@ AS is_thread_creator
 `
 
 type CheckThreadCreatorParams struct {
-	ID      pgtype.UUID
-	Creator string
+	ID      pgtype.UUID `json:"id"`
+	Creator string      `json:"creator"`
 }
 
 // Checks if a user is the creator of a thread.
@@ -89,9 +89,9 @@ RETURNING id, body, creator, thread_id, created_time, updated_time
 `
 
 type CreateCommentParams struct {
-	Body     string
-	Creator  string
-	ThreadID pgtype.UUID
+	Body     string      `json:"body"`
+	Creator  string      `json:"creator"`
+	ThreadID pgtype.UUID `json:"thread_id"`
 }
 
 // Creates a new comment with the given body, creator, and thread_id. Returns the details of the created comment.
@@ -116,9 +116,9 @@ RETURNING id, title, body, creator, created_time, updated_time, num_comments
 `
 
 type CreateThreadParams struct {
-	Title   string
-	Body    string
-	Creator string
+	Title   string `json:"title"`
+	Body    string `json:"body"`
+	Creator string `json:"creator"`
 }
 
 // Creates a new thread with the given title, body, and creator. Returns the details of the created thread.
@@ -143,8 +143,8 @@ VALUES ($1, $2)
 `
 
 type CreateUserParams struct {
-	Username string
-	Password string
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 // Creates a new user with the given username and password.
@@ -160,8 +160,8 @@ AND creator = $2
 `
 
 type DeleteCommentParams struct {
-	ID      pgtype.UUID
-	Creator string
+	ID      pgtype.UUID `json:"id"`
+	Creator string      `json:"creator"`
 }
 
 // Deletes the comment with the given id.
@@ -177,8 +177,8 @@ AND creator = $2
 `
 
 type DeleteThreadParams struct {
-	ID      pgtype.UUID
-	Creator string
+	ID      pgtype.UUID `json:"id"`
+	Creator string      `json:"creator"`
 }
 
 // Deletes the thread with the given id.
@@ -194,8 +194,8 @@ AND tag_name = $2
 `
 
 type DeleteThreadTagParams struct {
-	ThreadID pgtype.UUID
-	TagName  string
+	ThreadID pgtype.UUID `json:"thread_id"`
+	TagName  string      `json:"tag_name"`
 }
 
 // Removes the tag from the thread.
@@ -216,10 +216,10 @@ OFFSET $3
 `
 
 type GetCommentsParams struct {
-	ThreadID  pgtype.UUID
-	Limit     int32
-	Offset    int32
-	Sortorder string
+	ThreadID  pgtype.UUID `json:"thread_id"`
+	Limit     int32       `json:"limit"`
+	Offset    int32       `json:"offset"`
+	Sortorder string      `json:"sortorder"`
 }
 
 // Get comments for a thread.
@@ -283,14 +283,14 @@ GROUP BY t.id
 `
 
 type GetThreadDetailsRow struct {
-	ID          pgtype.UUID
-	Title       string
-	Body        string
-	Creator     string
-	CreatedTime pgtype.Timestamptz
-	UpdatedTime pgtype.Timestamptz
-	NumComments int32
-	Tags        []string
+	ID          pgtype.UUID        `json:"id"`
+	Title       string             `json:"title"`
+	Body        string             `json:"body"`
+	Creator     string             `json:"creator"`
+	CreatedTime pgtype.Timestamptz `json:"created_time"`
+	UpdatedTime pgtype.Timestamptz `json:"updated_time"`
+	NumComments int32              `json:"num_comments"`
+	Tags        []string           `json:"tags"`
 }
 
 // Returns the details of the thread with the given id, as well as the tags of the thread as an array.
@@ -356,20 +356,20 @@ OFFSET $2
 `
 
 type GetThreadsParams struct {
-	Limit     int32
-	Offset    int32
-	Sortorder string
+	Limit     int32  `json:"limit"`
+	Offset    int32  `json:"offset"`
+	Sortorder string `json:"sortorder"`
 }
 
 type GetThreadsRow struct {
-	ID          pgtype.UUID
-	Title       string
-	Body        string
-	Creator     string
-	CreatedTime pgtype.Timestamptz
-	UpdatedTime pgtype.Timestamptz
-	NumComments int32
-	Tags        []string
+	ID          pgtype.UUID        `json:"id"`
+	Title       string             `json:"title"`
+	Body        string             `json:"body"`
+	Creator     string             `json:"creator"`
+	CreatedTime pgtype.Timestamptz `json:"created_time"`
+	UpdatedTime pgtype.Timestamptz `json:"updated_time"`
+	NumComments int32              `json:"num_comments"`
+	Tags        []string           `json:"tags"`
 }
 
 // Returns the details of all threads.
@@ -423,21 +423,21 @@ OFFSET $2
 `
 
 type GetThreadsByMultipleKeywordParams struct {
-	Limit     int32
-	Offset    int32
-	Keywords  string
-	Sortorder string
+	Limit     int32  `json:"limit"`
+	Offset    int32  `json:"offset"`
+	Keywords  string `json:"keywords"`
+	Sortorder string `json:"sortorder"`
 }
 
 type GetThreadsByMultipleKeywordRow struct {
-	ID          pgtype.UUID
-	Title       string
-	Body        string
-	Creator     string
-	CreatedTime pgtype.Timestamptz
-	UpdatedTime pgtype.Timestamptz
-	NumComments int32
-	Tags        []string
+	ID          pgtype.UUID        `json:"id"`
+	Title       string             `json:"title"`
+	Body        string             `json:"body"`
+	Creator     string             `json:"creator"`
+	CreatedTime pgtype.Timestamptz `json:"created_time"`
+	UpdatedTime pgtype.Timestamptz `json:"updated_time"`
+	NumComments int32              `json:"num_comments"`
+	Tags        []string           `json:"tags"`
 }
 
 // Returns the details of threads that match all the given keywords.
@@ -498,21 +498,21 @@ OFFSET $2
 `
 
 type GetThreadsByMultipleTagsParams struct {
-	Limit     int32
-	Offset    int32
-	Tagarray  []string
-	Sortorder string
+	Limit     int32    `json:"limit"`
+	Offset    int32    `json:"offset"`
+	Tagarray  []string `json:"tagarray"`
+	Sortorder string   `json:"sortorder"`
 }
 
 type GetThreadsByMultipleTagsRow struct {
-	ID          pgtype.UUID
-	Title       string
-	Body        string
-	Creator     string
-	CreatedTime pgtype.Timestamptz
-	UpdatedTime pgtype.Timestamptz
-	NumComments int32
-	Tags        []string
+	ID          pgtype.UUID        `json:"id"`
+	Title       string             `json:"title"`
+	Body        string             `json:"body"`
+	Creator     string             `json:"creator"`
+	CreatedTime pgtype.Timestamptz `json:"created_time"`
+	UpdatedTime pgtype.Timestamptz `json:"updated_time"`
+	NumComments int32              `json:"num_comments"`
+	Tags        []string           `json:"tags"`
 }
 
 // Returns the details of threads that match all the given tags.
@@ -573,22 +573,22 @@ OFFSET $2
 `
 
 type GetThreadsByMultipleTagsAndKeywordParams struct {
-	Limit     int32
-	Offset    int32
-	Keywords  string
-	Tagarray  []string
-	Sortorder string
+	Limit     int32    `json:"limit"`
+	Offset    int32    `json:"offset"`
+	Keywords  string   `json:"keywords"`
+	Tagarray  []string `json:"tagarray"`
+	Sortorder string   `json:"sortorder"`
 }
 
 type GetThreadsByMultipleTagsAndKeywordRow struct {
-	ID          pgtype.UUID
-	Title       string
-	Body        string
-	Creator     string
-	CreatedTime pgtype.Timestamptz
-	UpdatedTime pgtype.Timestamptz
-	NumComments int32
-	Tags        []string
+	ID          pgtype.UUID        `json:"id"`
+	Title       string             `json:"title"`
+	Body        string             `json:"body"`
+	Creator     string             `json:"creator"`
+	CreatedTime pgtype.Timestamptz `json:"created_time"`
+	UpdatedTime pgtype.Timestamptz `json:"updated_time"`
+	NumComments int32              `json:"num_comments"`
+	Tags        []string           `json:"tags"`
 }
 
 // Returns the details of threads that match all the given tags and keywords.
@@ -637,9 +637,9 @@ AND creator = $3
 `
 
 type UpdateCommentParams struct {
-	Body    string
-	ID      pgtype.UUID
-	Creator string
+	Body    string      `json:"body"`
+	ID      pgtype.UUID `json:"id"`
+	Creator string      `json:"creator"`
 }
 
 // Updates the comment with the given id.
@@ -656,10 +656,10 @@ AND creator = $4
 `
 
 type UpdateThreadParams struct {
-	Title   string
-	Body    string
-	ID      pgtype.UUID
-	Creator string
+	Title   string      `json:"title"`
+	Body    string      `json:"body"`
+	ID      pgtype.UUID `json:"id"`
+	Creator string      `json:"creator"`
 }
 
 // Updates the thread with the given id.
