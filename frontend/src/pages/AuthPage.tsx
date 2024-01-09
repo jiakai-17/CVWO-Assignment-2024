@@ -1,10 +1,17 @@
 import * as React from "react";
+import { useContext, useState } from "react";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useNavigate } from "react-router-dom";
 import { CircularProgress, Divider } from "@mui/material";
-import { useState } from "react";
+import AuthContext from "../contexts/AuthContext.tsx";
+
+export type JWTPayload = {
+  username: string;
+  iat: number;
+  exp: number;
+};
 
 export default function AuthPage(
   props: Readonly<{
@@ -12,6 +19,7 @@ export default function AuthPage(
   }>,
 ) {
   const navigate = useNavigate();
+  const { setAuthFromToken } = useContext(AuthContext);
 
   const title = props.type === "login" ? "Login" : "Sign Up";
   const mainButtonLabel = props.type === "login" ? "Login" : "Create account";
@@ -32,9 +40,11 @@ export default function AuthPage(
   const [isInvalidUsername, setIsInvalidUsername] = useState(false);
   const [isInvalidPassword, setIsInvalidPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isError, setIsError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const checkInvalidUsername = () => {
-    if (username.length < 1 || username.length > 30) {
+    if (username.length < 1 || username.length > 30 || username.includes(" ")) {
       setIsInvalidUsername(true);
       return true;
     } else {
@@ -54,6 +64,8 @@ export default function AuthPage(
   };
 
   const handleSubmit = () => {
+    setIsError(false);
+    setErrorMessage("");
     setIsLoading(true);
 
     const isInvalidUsername = checkInvalidUsername();
@@ -113,6 +125,15 @@ export default function AuthPage(
             error={isInvalidPassword}
             helperText={"Password must be at least 6 characters long"}
           />
+          {isError && (
+            <Typography
+              variant="body1"
+              color="error"
+              sx={{ mt: 1 }}
+            >
+              {errorMessage}
+            </Typography>
+          )}
           <Button
             type="submit"
             fullWidth
@@ -136,6 +157,8 @@ export default function AuthPage(
               setPassword("");
               setIsInvalidPassword(false);
               setIsInvalidUsername(false);
+              setIsError(false);
+              setErrorMessage("");
               navigate(secondaryButtonLink);
             }}
             disabled={isLoading}

@@ -1,14 +1,18 @@
-import { jwtDecode } from "jwt-decode";
+import { createContext } from "react";
 
-export default function useAuth() {
-  if (localStorage.getItem("token") === null || localStorage.getItem("token") === undefined) {
-    return false;
-  } else {
-    try {
-      jwtDecode(localStorage.getItem("token") ?? "");
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-}
+const AuthContext = createContext({
+  auth: {
+    username: "",
+    token: "",
+    iat: 0,
+    exp: 0,
+    isLogin: false,
+  },
+  setAuthFromToken: (token: string) => {
+    // dummy function to prevent typescript warning about unused variables
+    ((x) => x)(token);
+  },
+  resetAuth: () => {},
+});
+
+export default AuthContext;

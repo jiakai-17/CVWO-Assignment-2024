@@ -1,29 +1,31 @@
-import * as React from "react";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import UserAvatarDetails from "./UserAvatarDetails";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import AuthContext from "../contexts/AuthContext.tsx";
 
 export default function Navbar() {
-  const [isLogin, setIsLogin] = useState(JSON.parse(localStorage?.getItem("isLogin") ?? "false"));
+  const navigate = useNavigate();
+  const { auth, resetAuth } = useContext(AuthContext);
+  const [isLogin, setIsLogin] = useState(auth.isLogin);
 
   useEffect(() => {
-    if (localStorage?.getItem("isLogin") === null) {
-      localStorage.setItem("isLogin", JSON.stringify(false));
-    }
-  }, [isLogin]);
+    setIsLogin(auth.isLogin);
+  }, [auth.isLogin]);
 
-  function toggleLogin() {
-    localStorage.setItem("isLogin", JSON.stringify(!isLogin));
-    setIsLogin(!isLogin);
+  const handleLogout = () => {
+    resetAuth();
+  };
+
+  function handleLogin() {
+    navigate("/login");
   }
 
-  function handleLoginToggle(event: React.MouseEvent<HTMLButtonElement>) {
-    console.log("handleLoginToggle", event);
-    toggleLogin();
+  function handleSignup() {
+    navigate("/signup");
   }
 
   return (
@@ -49,7 +51,10 @@ export default function Navbar() {
           <div className={"flex-grow"} />
           {!isLogin && (
             <div className={"mr-4"}>
-              <Button color="inherit">
+              <Button
+                color="inherit"
+                onClick={handleSignup}
+              >
                 <Typography className={"text-white"}>Sign Up</Typography>
               </Button>
             </div>
@@ -60,7 +65,7 @@ export default function Navbar() {
                 <Typography className={"text-white"}>Welcome,</Typography>
               </div>
               <UserAvatarDetails
-                creator={"guest"}
+                creator={auth.username}
                 textColor={"white"}
                 fontSize={"1rem"}
               />
@@ -68,7 +73,7 @@ export default function Navbar() {
           )}
           <Button
             color="inherit"
-            onClick={handleLoginToggle}
+            onClick={isLogin ? handleLogout : handleLogin}
           >
             <Typography className={"text-white"}>{isLogin ? "Logout" : "Login"}</Typography>
           </Button>
