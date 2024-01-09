@@ -14,21 +14,23 @@ import (
 
 // SearchThread Handler for /api/v1/searchThread
 func SearchThread(w http.ResponseWriter, r *http.Request) {
-	// Only POST
-	if r.Method != http.MethodPost {
+	// Only GET
+	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
+	// TODO Add pagination object to response
 	// How many threads per page
 	size := 10
 	// Available sorting orders
 	availableSortOrders := []string{"created_time_asc", "created_time_desc", "num_comments_asc", "num_comments_desc"}
 
 	// Get details from request body
-	queryString := r.FormValue("query")
-	page := r.FormValue("page")
-	order := r.FormValue("order")
+	params := r.URL.Query()
+	queryString := params.Get("q")
+	page := params.Get("p")
+	order := params.Get("order")
 
 	// Check sort order
 	if order == "" || !slices.Contains(availableSortOrders, order) {
