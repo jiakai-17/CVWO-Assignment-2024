@@ -1,4 +1,4 @@
-package user
+package models
 
 // AuthResponseJson Provides the layout for the JSON object returned by CreateUser and LoginUser
 type AuthResponseJson struct {

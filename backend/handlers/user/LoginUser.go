@@ -2,6 +2,7 @@ package user
 
 import (
 	"backend/database"
+	"backend/models"
 	"backend/tutorial"
 	"backend/utils"
 	"context"
@@ -29,12 +30,22 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	// Only POST
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("Method not allowed"))
 		return
 	}
 
-	// Get username and password from request body
-	username := r.FormValue("username")
-	password := r.FormValue("password")
+	var creds models.AuthRequestJson
+	err := json.NewDecoder(r.Body).Decode(&creds)
+	if err != nil {
+		utils.Log("LoginUser", "Unable to decode JSON: ", err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Invalid data"))
+		return
+	}
+
+	// Get username and password from request json
+	username := creds.Username
+	password := creds.Password
 
 	username = strings.TrimSpace(username)
 
@@ -51,12 +62,14 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		utils.Log("LoginUser", "Unable to check if user exists: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal server error"))
 		return
 	}
 
 	if !isExistingUser {
 		utils.Log("LoginUser", "Username does not exist: "+username, errors.New("username does not exist"))
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("Invalid username/password"))
 		return
 	}
 
@@ -65,6 +78,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		utils.Log("LoginUser", "Unable to get password hash: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal server error"))
 		return
 	}
 
@@ -75,6 +89,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		utils.Log("LoginUser", "Incorrect password: ", err)
 		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("Incorrect username/password"))
 		return
 	}
 
@@ -83,18 +98,20 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		utils.Log("LoginUser", "Unable to create JWT token: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal server error"))
 		return
 	}
 
 	// Return username and token as JSON object
 	w.Header().Set("Content-Type", "application/json")
-	jsonErr := json.NewEncoder(w).Encode(AuthResponseJson{
+	jsonErr := json.NewEncoder(w).Encode(models.AuthResponseJson{
 		Username: user.Username,
 		Token:    token})
 
 	if jsonErr != nil {
 		utils.Log("LoginUser", "Unable to encode JSON: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal server error"))
 		return
 	}
 

@@ -1,7 +1,7 @@
 package debug
 
 import (
-	"backend/handlers/user"
+	"backend/models"
 	"backend/utils"
 	"encoding/json"
 	"net/http"
@@ -21,7 +21,7 @@ func GetToken(w http.ResponseWriter, r *http.Request) {
 
 	// Return username and token as JSON object
 	w.Header().Set("Content-Type", "application/json")
-	jsonErr := json.NewEncoder(w).Encode(user.AuthResponseJson{Username: username, Token: token})
+	jsonErr := json.NewEncoder(w).Encode(models.AuthResponseJson{Username: username, Token: token})
 
 	if jsonErr != nil {
 		w.WriteHeader(http.StatusInternalServerError)
