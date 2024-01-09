@@ -79,8 +79,56 @@ export default function AuthPage(
 
     if (props.type === "login") {
       console.log("Logging in with username", username, "and password", password);
+      fetch("/api/v1/user/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username,
+          password,
+        }),
+      }).then((response) => {
+        if (response.status === 200) {
+          response.json().then((data) => {
+            localStorage.setItem("token", data.token);
+            setAuthFromToken(data.token);
+            navigate("/");
+          });
+        } else {
+          setIsLoading(false);
+          response.text().then((text) => {
+            setIsError(true);
+            setErrorMessage(text);
+          });
+        }
+      });
     } else if (props.type === "signup") {
       console.log("Signing up with username", username, "and password", password);
+      fetch("/api/v1/user/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username,
+          password,
+        }),
+      }).then((response) => {
+        if (response.status === 200) {
+          response.json().then((data) => {
+            localStorage.setItem("token", data.token);
+            setAuthFromToken(data.token);
+            navigate("/");
+          });
+        } else {
+          setIsLoading(false);
+          response.text().then((text) => {
+            setIsError(true);
+            setErrorMessage(text);
+          });
+        }
+      });
     } else {
       throw new Error("Invalid auth page type");
     }

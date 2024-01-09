@@ -87,8 +87,8 @@ export default function ThreadPreview(t: Readonly<Thread>) {
               }}
             >
               <UserContentTimestamp
-                createdTimestamp={t.created_time}
-                updatedTimestamp={t.updated_time}
+                createdTimestamp={new Date(t.created_time)}
+                updatedTimestamp={new Date(t.updated_time)}
               />
             </Box>
           </Box>
