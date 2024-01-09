@@ -6,6 +6,7 @@ import App from "./App.tsx";
 import MainPage from "./pages/MainPage.tsx";
 import ThreadPage, { loader as ThreadLoader } from "./pages/ThreadPage.tsx";
 import ThreadEditorPage from "./pages/ThreadEditorPage.tsx";
+import AuthPage from "./pages/AuthPage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -29,6 +30,18 @@ const router = createBrowserRouter([
       {
         path: "/new",
         element: <ThreadEditorPage type={"create"} />,
+      },
+      {
+        path: "/login",
+        element: <AuthPage type={"login"} />,
+      },
+      {
+        path: "/signup",
+        element: <AuthPage type={"signup"} />,
+      },
+      {
+        path: "*",
+        element: <h1>Not Found</h1>,
       },
     ],
   },
