@@ -235,7 +235,7 @@ func (q *Queries) GetComments(ctx context.Context, arg GetCommentsParams) ([]Com
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Comment
+	items := []Comment{}
 	for rows.Next() {
 		var i Comment
 		if err := rows.Scan(
@@ -323,7 +323,7 @@ func (q *Queries) GetThreadTags(ctx context.Context, threadID pgtype.UUID) ([]st
 		return nil, err
 	}
 	defer rows.Close()
-	var items []string
+	items := []string{}
 	for rows.Next() {
 		var tag_name string
 		if err := rows.Scan(&tag_name); err != nil {
@@ -380,7 +380,7 @@ func (q *Queries) GetThreads(ctx context.Context, arg GetThreadsParams) ([]GetTh
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetThreadsRow
+	items := []GetThreadsRow{}
 	for rows.Next() {
 		var i GetThreadsRow
 		if err := rows.Scan(
@@ -454,7 +454,7 @@ func (q *Queries) GetThreadsByMultipleKeyword(ctx context.Context, arg GetThread
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetThreadsByMultipleKeywordRow
+	items := []GetThreadsByMultipleKeywordRow{}
 	for rows.Next() {
 		var i GetThreadsByMultipleKeywordRow
 		if err := rows.Scan(
@@ -485,9 +485,14 @@ SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_c
     END AS tags
 FROM threads t
 INNER JOIN thread_tags tt ON t.id = tt.thread_id
-WHERE tt.tag_name = ANY($3::text[])
+WHERE t.id IN (
+    SELECT tt.thread_id
+    FROM thread_tags tt
+    WHERE tt.tag_name = ANY($3::text[])
+    GROUP BY tt.thread_id
+    HAVING COUNT(DISTINCT tt.tag_name) = ARRAY_LENGTH($3::text[], 1)
+)
 GROUP BY t.id
-HAVING COUNT(DISTINCT tt.tag_name) = ARRAY_LENGTH($3::text[], 1)
 ORDER BY
     CASE WHEN $4::text = 'created_time_asc' THEN t.created_time END ASC,
     CASE WHEN $4::text = 'created_time_desc' THEN t.created_time END DESC,
@@ -528,7 +533,7 @@ func (q *Queries) GetThreadsByMultipleTags(ctx context.Context, arg GetThreadsBy
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetThreadsByMultipleTagsRow
+	items := []GetThreadsByMultipleTagsRow{}
 	for rows.Next() {
 		var i GetThreadsByMultipleTagsRow
 		if err := rows.Scan(
@@ -560,9 +565,15 @@ SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_c
 FROM threads t
 LEFT JOIN thread_tags tt ON t.id = tt.thread_id
 WHERE TO_TSVECTOR('simple', t.title || ' ' || t.body) @@ TO_TSQUERY('simple', $3::text)
-AND tt.tag_name = ANY($4::text[])
+AND t.id IN (
+    SELECT tt.thread_id
+    FROM thread_tags tt
+    WHERE tt.tag_name = ANY ($4::text[])
+    GROUP BY tt.thread_id
+    HAVING COUNT (DISTINCT tt.tag_name) = ARRAY_LENGTH($4::text[]
+    , 1)
+    )
 GROUP BY t.id
-HAVING COUNT(DISTINCT tt.tag_name) = array_length($4::text[], 1)
 ORDER BY
     CASE WHEN $5::text = 'created_time_asc' THEN created_time END ASC,
     CASE WHEN $5::text = 'created_time_desc' THEN created_time END DESC,
@@ -606,7 +617,7 @@ func (q *Queries) GetThreadsByMultipleTagsAndKeyword(ctx context.Context, arg Ge
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetThreadsByMultipleTagsAndKeywordRow
+	items := []GetThreadsByMultipleTagsAndKeywordRow{}
 	for rows.Next() {
 		var i GetThreadsByMultipleTagsAndKeywordRow
 		if err := rows.Scan(

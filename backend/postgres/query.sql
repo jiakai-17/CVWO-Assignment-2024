@@ -112,9 +112,14 @@ SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_c
     END AS tags
 FROM threads t
 INNER JOIN thread_tags tt ON t.id = tt.thread_id
-WHERE tt.tag_name = ANY(@tagArray::text[])
+WHERE t.id IN (
+    SELECT tt.thread_id
+    FROM thread_tags tt
+    WHERE tt.tag_name = ANY(@tagArray::text[])
+    GROUP BY tt.thread_id
+    HAVING COUNT(DISTINCT tt.tag_name) = ARRAY_LENGTH(@tagArray::text[], 1)
+)
 GROUP BY t.id
-HAVING COUNT(DISTINCT tt.tag_name) = ARRAY_LENGTH(@tagArray::text[], 1)
 ORDER BY
     CASE WHEN @sortOrder::text = 'created_time_asc' THEN t.created_time END ASC,
     CASE WHEN @sortOrder::text = 'created_time_desc' THEN t.created_time END DESC,
@@ -158,9 +163,15 @@ SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_c
 FROM threads t
 LEFT JOIN thread_tags tt ON t.id = tt.thread_id
 WHERE TO_TSVECTOR('simple', t.title || ' ' || t.body) @@ TO_TSQUERY('simple', @keywords::text)
-AND tt.tag_name = ANY(@tagArray::text[])
+AND t.id IN (
+    SELECT tt.thread_id
+    FROM thread_tags tt
+    WHERE tt.tag_name = ANY (@tagArray::text[])
+    GROUP BY tt.thread_id
+    HAVING COUNT (DISTINCT tt.tag_name) = ARRAY_LENGTH(@tagArray::text[]
+    , 1)
+    )
 GROUP BY t.id
-HAVING COUNT(DISTINCT tt.tag_name) = array_length(@tagArray::text[], 1)
 ORDER BY
     CASE WHEN @sortOrder::text = 'created_time_asc' THEN created_time END ASC,
     CASE WHEN @sortOrder::text = 'created_time_desc' THEN created_time END DESC,
