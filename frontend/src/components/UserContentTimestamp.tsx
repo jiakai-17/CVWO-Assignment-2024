@@ -1,5 +1,3 @@
-"use client";
-
 import { ListItemText, Tooltip } from "@mui/material";
 
 export default function UserContentTimestamp(props: Readonly<{
@@ -29,9 +27,9 @@ export default function UserContentTimestamp(props: Readonly<{
   return (
     <Tooltip title={
       <p style={{ whiteSpace: "pre-line", margin: 0 }}>{tooltipString}</p>
-    }>
-      <ListItemText secondary={displayString}
-                    sx={{ fontSize: { xs: "0.5rem", sm: "body2" } }} />
-    </Tooltip>
-  );
+}>
+  <ListItemText secondary={displayString}
+  sx={{ fontSize: { xs: "0.5rem", sm: "body2" } }} />
+  </Tooltip>
+);
 }

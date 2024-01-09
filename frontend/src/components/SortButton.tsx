@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 import Button from "@mui/material/Button";
 import Menu from "@mui/material/Menu";
@@ -7,12 +5,13 @@ import MenuItem from "@mui/material/MenuItem";
 import SortIcon from "@mui/icons-material/Sort";
 import { useState } from "react";
 
-export default function SortButton(props: Readonly<{
-  availableSortCriteriaMappings: Map<string, string>
-  setSortCriteria: (sortCriteria: string) => void
-  size: "small" | "large"
-}>) {
-
+export default function SortButton(
+  props: Readonly<{
+    availableSortCriteriaMappings: Map<string, string>;
+    setSortCriteria: (sortCriteria: string) => void;
+    size: "small" | "large";
+  }>,
+) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -42,8 +41,9 @@ export default function SortButton(props: Readonly<{
         onClick={handleClick}
         variant="outlined"
         size={props.size}
-        endIcon={props.size === "large" ? <SortIcon /> : undefined}>
-        {props.size === "large" ? "Sort by..." : <SortIcon />}
+        endIcon={props.size === "large" ? <SortIcon /> : undefined}
+      >
+        {props.size === "large" ? "Sort" : <SortIcon />}
       </Button>
       <Menu
         id="basic-menu"
@@ -55,7 +55,10 @@ export default function SortButton(props: Readonly<{
         }}
       >
         {Array.from(props.availableSortCriteriaMappings.keys()).map((criteria) => (
-          <MenuItem key={criteria} onClick={handleMenuItemClick}>
+          <MenuItem
+            key={criteria}
+            onClick={handleMenuItemClick}
+          >
             {criteria}
           </MenuItem>
         ))}

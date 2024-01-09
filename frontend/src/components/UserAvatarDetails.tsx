@@ -1,40 +1,30 @@
-"use client";
-
-import Avatar from "@mui/material/Avatar";
 import { toSvg } from "jdenticon";
-import { ListItemText } from "@mui/material";
+import Typography from "@mui/material/Typography";
 
-export default function UserAvatarDetails(props: Readonly<{
-  creator: string,
-  textColor?: string
-  fontSize?: string
-}>) {
-
-  const textColor = props.textColor ?? "rgba(0, 0, 0, 0.6)";
-  const fontSize = props.fontSize ?? "0.875rem";
-
+export default function UserAvatarDetails(
+  props: Readonly<{
+    creator: string;
+    textColor?: string;
+    fontSize?: string;
+  }>,
+) {
   return (
-    <>
-      <Avatar alt={props.creator}
-              src={`data:image/svg+xml;utf8,${encodeURIComponent(toSvg(props.creator, 50))}`}
-              sx={{
-                bgcolor: "white",
-                border: 1,
-                borderColor: "darkgray",
-                width: { xs: "20px", sm: "30px" },
-                height: { xs: "20px", sm: "30px" },
-                aspectRatio: 1,
-              }}>
-      </Avatar>
-      <ListItemText secondary={props.creator}
-                    secondaryTypographyProps={{
-                      sx: {
-                        textOverflow: "ellipsis",
-                        overflow: "hidden",
-                        color: textColor,
-                        fontSize: fontSize,
-                      },
-                    }}
+    <div className={"flex items-center overflow-hidden text-ellipsis"}>
+      <img
+        alt={props.creator}
+        src={`data:image/svg+xml;utf8,${encodeURIComponent(toSvg(props.creator, 50))}`}
+        className={"mr-2 flex aspect-square h-7 w-7 rounded-full border border-solid border-gray-500 bg-white"}
       />
-    </>);
+      <Typography
+        noWrap
+        className={"overflow-hidden text-ellipsis"}
+        style={{
+          color: props.textColor ?? "rgba(0, 0, 0, 0.6)",
+          fontSize: props.fontSize ?? "0.875rem",
+        }}
+      >
+        {props.creator}
+      </Typography>
+    </div>
+  );
 }
