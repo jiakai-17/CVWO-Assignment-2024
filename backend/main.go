@@ -6,21 +6,10 @@ import (
 	"backend/handlers/threads"
 	"backend/handlers/user"
 	"backend/utils"
-	"context"
 	"github.com/gorilla/mux"
-	"github.com/jackc/pgx/v5"
 	"log"
 	"net/http"
 )
-
-// Helper function to pass the pgx.Conn object to the handler
-func wrapDbConnection(
-	handler func(http.ResponseWriter, *http.Request, *pgx.Conn),
-	conn *pgx.Conn) func(http.ResponseWriter, *http.Request) {
-	return func(writer http.ResponseWriter, request *http.Request) {
-		handler(writer, request, conn)
-	}
-}
 
 var BASE_PATH = "/api/v1/"
 
@@ -44,15 +33,6 @@ func main() {
 
 	r := mux.NewRouter()
 
-	// Connect to database
-	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, "user=postgres dbname=cvwo-1 password=cs2102")
-	if err != nil {
-		log.Fatal("[ERROR] Unable to connect to database: ", err)
-		return
-	}
-	defer conn.Close(ctx)
-
 	// Routes
 	// Authentication (debug)
 	if IS_DEBUG {
@@ -61,23 +41,24 @@ func main() {
 	}
 
 	// Authentication
-	http.HandleFunc(BASE_PATH+"user/create", wrapDbConnection(user.CreateUser, conn))
-	http.HandleFunc(BASE_PATH+"user/login", wrapDbConnection(user.LoginUser, conn))
+	http.HandleFunc(BASE_PATH+"user/create", user.CreateUser)
+	http.HandleFunc(BASE_PATH+"user/login", user.LoginUser)
 
 	// Comments
-	r.HandleFunc(BASE_PATH+"thread/{thread_id}/comments", wrapDbConnection(comments.GetComment, conn)).Methods("GET")
-	http.HandleFunc(BASE_PATH+"comment/create", wrapDbConnection(comments.CreateComment, conn))
-	r.HandleFunc(BASE_PATH+"comment/{id}", wrapDbConnection(comments.UpdateComment, conn)).Methods("PUT")
-	r.HandleFunc(BASE_PATH+"comment/{id}", wrapDbConnection(comments.DeleteComment, conn)).Methods("DELETE")
+	r.HandleFunc(BASE_PATH+"thread/{thread_id}/comments", comments.GetComment).Methods("GET")
+	http.HandleFunc(BASE_PATH+"comment/create", comments.CreateComment)
+	r.HandleFunc(BASE_PATH+"comment/{id}", comments.UpdateComment).Methods("PUT")
+	r.HandleFunc(BASE_PATH+"comment/{id}", comments.DeleteComment).Methods("DELETE")
 
 	// Threads
-	http.HandleFunc("/api/v1/getThread", threads.GetThread)
-	http.HandleFunc("/api/v1/createThread", threads.CreateThread)
-	http.HandleFunc("/api/v1/updateThread", threads.DeleteThread)
-	http.HandleFunc("/api/v1/deleteThread", threads.DeleteThread)
+	//r.HandleFunc(BASE_PATH+"threads", threads.GetThreads).Methods("GET")
+	r.HandleFunc(BASE_PATH+"thread/{id}", threads.GetThread).Methods("GET")
+	http.HandleFunc(BASE_PATH+"thread/create", threads.CreateThread)
+	r.HandleFunc(BASE_PATH+"thread/{id}", threads.UpdateThread).Methods("PUT")
+	r.HandleFunc(BASE_PATH+"thread/{id}", threads.DeleteThread).Methods("DELETE")
 
 	// Search Threads
-	http.HandleFunc("/api/v1/searchThread", threads.SearchThread)
+	http.HandleFunc(BASE_PATH+"thread", threads.SearchThread)
 
 	// Start server
 	http.Handle("/", r)

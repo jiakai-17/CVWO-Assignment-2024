@@ -1,11 +1,11 @@
 package comments
 
 import (
+	"backend/database"
 	"backend/tutorial"
 	"backend/utils"
 	"context"
 	"encoding/json"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"log"
 	"net/http"
@@ -24,7 +24,7 @@ import (
 // @Failure 401 "Invalid JWT token"
 // @Failure 500
 // @Router /comment/create [post]
-func CreateComment(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
+func CreateComment(w http.ResponseWriter, r *http.Request) {
 	// Only POST
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -54,6 +54,7 @@ func CreateComment(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 
 	// Connect to database
 	ctx := context.Background()
+	conn := database.GetConnection()
 	queries := tutorial.New(conn)
 
 	// Create thread UUID for pg

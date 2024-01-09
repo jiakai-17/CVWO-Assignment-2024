@@ -1,11 +1,11 @@
 package comments
 
 import (
+	"backend/database"
 	"backend/tutorial"
 	"context"
 	"encoding/json"
 	"github.com/gorilla/mux"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"log"
 	"net/http"
@@ -23,7 +23,7 @@ import (
 // @Success 200 "JSON array of comments"
 // @Failure 500
 // @Router /thread/{thread_id}/comments [get]
-func GetComment(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
+func GetComment(w http.ResponseWriter, r *http.Request) {
 	// Only GET
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -56,6 +56,7 @@ func GetComment(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 
 	// Connect to database
 	ctx := context.Background()
+	conn := database.GetConnection()
 	queries := tutorial.New(conn)
 
 	var threadUUID pgtype.UUID

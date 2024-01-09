@@ -1,12 +1,12 @@
 package user
 
 import (
+	"backend/database"
 	"backend/tutorial"
 	"backend/utils"
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/jackc/pgx/v5"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"strings"
@@ -25,7 +25,7 @@ import (
 // @Failure 401 "Incorrect password"
 // @Failure 500
 // @Router /user/login [post]
-func LoginUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
+func LoginUser(w http.ResponseWriter, r *http.Request) {
 	// Only POST
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -42,6 +42,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 
 	// Connect to database
 	ctx := context.Background()
+	conn := database.GetConnection()
 	queries := tutorial.New(conn)
 
 	// Check if username exists

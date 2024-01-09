@@ -1,10 +1,10 @@
 package threads
 
 import (
+	"backend/database"
 	"backend/tutorial"
 	"context"
 	"encoding/json"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"log"
 	"net/http"
@@ -23,15 +23,7 @@ func GetThread(w http.ResponseWriter, r *http.Request) {
 
 	// Connect to database
 	ctx := context.Background()
-
-	conn, err := pgx.Connect(ctx, "user=postgres dbname=cvwo-1 password=cs2102")
-	if err != nil {
-		log.Println("[ERROR] Unable to connect to database: ", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	defer conn.Close(ctx)
-
+	conn := database.GetConnection()
 	queries := tutorial.New(conn)
 
 	var threadUUID pgtype.UUID
@@ -55,6 +47,4 @@ func GetThread(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	return
 }

@@ -1,11 +1,11 @@
 package comments
 
 import (
+	"backend/database"
 	"backend/tutorial"
 	"backend/utils"
 	"context"
 	"github.com/gorilla/mux"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"log"
 	"net/http"
@@ -22,7 +22,7 @@ import (
 // @Failure 403 "User is not the creator of the comment"
 // @Failure 500
 // @Router /comment/{id} [put]
-func UpdateComment(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
+func UpdateComment(w http.ResponseWriter, r *http.Request) {
 	// Only PUT
 	if r.Method != http.MethodPut {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -53,6 +53,7 @@ func UpdateComment(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 
 	// Connect to database
 	ctx := context.Background()
+	conn := database.GetConnection()
 	queries := tutorial.New(conn)
 
 	// Create comment UUID for pg

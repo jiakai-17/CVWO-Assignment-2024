@@ -1,12 +1,12 @@
 package user
 
 import (
+	"backend/database"
 	"backend/tutorial"
 	"backend/utils"
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/jackc/pgx/v5"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"strings"
@@ -24,7 +24,7 @@ import (
 // @Failure 400 "Username already exists"
 // @Failure 500
 // @Router /user/create [post]
-func CreateUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
+func CreateUser(w http.ResponseWriter, r *http.Request) {
 	// Only POST
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -41,6 +41,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 
 	// Connect to database
 	ctx := context.Background()
+	conn := database.GetConnection()
 	queries := tutorial.New(conn)
 
 	// Check if username exists

@@ -1,11 +1,11 @@
 package comments
 
 import (
+	"backend/database"
 	"backend/tutorial"
 	"backend/utils"
 	"context"
 	"github.com/gorilla/mux"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"log"
 	"net/http"
@@ -21,7 +21,7 @@ import (
 // @Failure 403 "User is not the creator of the comment"
 // @Failure 500
 // @Router /comment/{id} [delete]
-func DeleteComment(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
+func DeleteComment(w http.ResponseWriter, r *http.Request) {
 	// Only DELETE
 	if r.Method != http.MethodDelete {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -52,6 +52,7 @@ func DeleteComment(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 
 	// Connect to database
 	ctx := context.Background()
+	conn := database.GetConnection()
 	queries := tutorial.New(conn)
 
 	// Create comment UUID for pg
