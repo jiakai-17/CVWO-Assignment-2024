@@ -8,14 +8,50 @@ services:
     build:
       context: ./database
       dockerfile: Dockerfile
+    container_name: db
     restart: always
     environment:
-      POSTGRES_PASSWORD: example
-    ports:
-      - 6677:5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: YOUR_PASSWORD
+      POSTGRES_DB: YOUR_DB
+    networks:
+      - cvwo-network
 
   adminer:
     image: adminer
     restart: always
     ports:
       - 8080:8080
+    networks:
+      - cvwo-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend
+    restart: always
+    environment:
+      DATABASE_URL: "YOUR_CONNECTION_STRING"
+    ports:
+      - 9090:9090
+    depends_on:
+      - db
+    networks:
+      - cvwo-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    restart: always
+    ports:
+      - 3000:3000
+    depends_on:
+      - backend
+    networks:
+      - cvwo-network
+
+networks:
+  cvwo-network:

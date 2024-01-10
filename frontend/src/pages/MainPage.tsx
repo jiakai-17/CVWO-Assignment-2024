@@ -39,7 +39,7 @@ export default function Page() {
 
   // Handle pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(10);
+  const [totalPages, _setTotalPages] = useState(10);
   const handlePageChange = (_event: ChangeEvent<unknown>, value: number) => {
     console.log("page changed", value);
     setCurrentPage(value);
