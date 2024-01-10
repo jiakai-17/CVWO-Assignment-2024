@@ -89,17 +89,37 @@ FROM thread_tags
 WHERE thread_id = $1;
 
 
--- Adds a tag to the thread.
--- name: AddThreadTag :exec
-INSERT INTO thread_tags (thread_id, tag_name)
-VALUES ($1, $2);
-
-
--- Removes the tag from the thread.
--- name: DeleteThreadTag :exec
+-- Deletes all tags of the thread with the given id.
+-- name: DeleteThreadTags :exec
 DELETE FROM thread_tags
-WHERE thread_id = $1
-AND tag_name = $2;
+WHERE thread_id = $1;
+
+-- Deletes tags that are not associated with any threads.
+-- name: DeleteUnusedTags :exec
+DELETE FROM tags
+WHERE name NOT IN (
+    SELECT DISTINCT tag_name
+    FROM thread_tags
+);
+
+-- Adds new tags to the database if they do not already exist.
+-- name: AddNewTags :exec
+INSERT INTO tags (name)
+SELECT new_tags FROM UNNEST(@tagArray::text[]) AS new_tags
+WHERE new_tags NOT IN (
+    SELECT name
+    FROM tags
+    WHERE name = new_tags)
+ON CONFLICT DO NOTHING;
+
+-- Adds tags to a thread if they do not already exist.
+-- name: AddThreadTags :exec
+INSERT INTO thread_tags (thread_id, tag_name)
+SELECT $1 as thread_id,
+       unnest(@tagArray::text[]) as tag_name
+ON CONFLICT DO NOTHING;
+COMMIT;
+
 
 
 -- Returns the details of threads that match all the given tags.

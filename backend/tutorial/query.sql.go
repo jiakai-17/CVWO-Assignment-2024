@@ -11,19 +11,37 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const addThreadTag = `-- name: AddThreadTag :exec
-INSERT INTO thread_tags (thread_id, tag_name)
-VALUES ($1, $2)
+const addNewTags = `-- name: AddNewTags :exec
+INSERT INTO tags (name)
+SELECT new_tags FROM UNNEST($1::text[]) AS new_tags
+WHERE new_tags NOT IN (
+    SELECT name
+    FROM tags
+    WHERE name = new_tags)
+ON CONFLICT DO NOTHING
 `
 
-type AddThreadTagParams struct {
-	ThreadID pgtype.UUID `json:"thread_id"`
-	TagName  string      `json:"tag_name"`
+// Adds new tags to the database if they do not already exist.
+func (q *Queries) AddNewTags(ctx context.Context, tagarray []string) error {
+	_, err := q.db.Exec(ctx, addNewTags, tagarray)
+	return err
 }
 
-// Adds a tag to the thread.
-func (q *Queries) AddThreadTag(ctx context.Context, arg AddThreadTagParams) error {
-	_, err := q.db.Exec(ctx, addThreadTag, arg.ThreadID, arg.TagName)
+const addThreadTags = `-- name: AddThreadTags :exec
+INSERT INTO thread_tags (thread_id, tag_name)
+SELECT $1 as thread_id,
+       unnest($2::text[]) as tag_name
+ON CONFLICT DO NOTHING
+`
+
+type AddThreadTagsParams struct {
+	ThreadID pgtype.UUID `json:"thread_id"`
+	Tagarray []string    `json:"tagarray"`
+}
+
+// Adds tags to a thread if they do not already exist.
+func (q *Queries) AddThreadTags(ctx context.Context, arg AddThreadTagsParams) error {
+	_, err := q.db.Exec(ctx, addThreadTags, arg.ThreadID, arg.Tagarray)
 	return err
 }
 
@@ -187,20 +205,28 @@ func (q *Queries) DeleteThread(ctx context.Context, arg DeleteThreadParams) erro
 	return err
 }
 
-const deleteThreadTag = `-- name: DeleteThreadTag :exec
+const deleteThreadTags = `-- name: DeleteThreadTags :exec
 DELETE FROM thread_tags
 WHERE thread_id = $1
-AND tag_name = $2
 `
 
-type DeleteThreadTagParams struct {
-	ThreadID pgtype.UUID `json:"thread_id"`
-	TagName  string      `json:"tag_name"`
+// Deletes all tags of the thread with the given id.
+func (q *Queries) DeleteThreadTags(ctx context.Context, threadID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteThreadTags, threadID)
+	return err
 }
 
-// Removes the tag from the thread.
-func (q *Queries) DeleteThreadTag(ctx context.Context, arg DeleteThreadTagParams) error {
-	_, err := q.db.Exec(ctx, deleteThreadTag, arg.ThreadID, arg.TagName)
+const deleteUnusedTags = `-- name: DeleteUnusedTags :exec
+DELETE FROM tags
+WHERE name NOT IN (
+    SELECT DISTINCT tag_name
+    FROM thread_tags
+)
+`
+
+// Deletes tags that are not associated with any threads.
+func (q *Queries) DeleteUnusedTags(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deleteUnusedTags)
 	return err
 }
 

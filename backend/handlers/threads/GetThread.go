@@ -5,6 +5,7 @@ import (
 	"backend/tutorial"
 	"context"
 	"encoding/json"
+	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5/pgtype"
 	"log"
 	"net/http"
@@ -12,14 +13,15 @@ import (
 
 // GetThread Handler for /api/v1/getThread
 func GetThread(w http.ResponseWriter, r *http.Request) {
-	// Only POST
-	if r.Method != http.MethodPost {
+	// Only GET
+	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Get details from request body
-	id := r.FormValue("id")
+	// Get details from request url
+	vars := mux.Vars(r)
+	id := vars["id"]
 
 	// Connect to database
 	ctx := context.Background()
@@ -33,9 +35,17 @@ func GetThread(w http.ResponseWriter, r *http.Request) {
 	thread, err := queries.GetThreadDetails(ctx, threadUUID)
 
 	if err != nil {
-		log.Println("[ERROR] Unable to get thread: ", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		if err.Error() == "no rows in result set" {
+			log.Println("[INFO] Thread not found: ", err)
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("Thread not found"))
+			return
+		} else {
+			log.Println("[ERROR] Unable to get thread: ", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Internal server error"))
+			return
+		}
 	}
 
 	// Return comment as JSON object
@@ -45,6 +55,7 @@ func GetThread(w http.ResponseWriter, r *http.Request) {
 	if jsonErr != nil {
 		log.Println("[ERROR] Unable to encode thread as JSON: ", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal server error"))
 		return
 	}
 }
