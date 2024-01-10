@@ -13,6 +13,7 @@ const AuthContext = createContext({
     ((x) => x)(token);
   },
   resetAuth: () => {},
+  isLoaded: false,
 });
 
 export default AuthContext;

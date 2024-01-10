@@ -105,7 +105,7 @@ export default function ThreadPreview(t: Readonly<Thread>) {
           >
             <Box
               aria-label={"Thread Tags"}
-              className={"mt-4 flex gap-3 overflow-scroll"}
+              className={"mt-4 flex gap-3 overflow-x-auto"}
             >
               {t.tags.map((tag) => (
                 <ThreadTag

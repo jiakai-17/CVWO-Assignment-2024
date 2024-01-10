@@ -126,6 +126,7 @@ export default function ThreadPage() {
                 overflowWrap: "break-word",
                 py: 2,
                 mb: 5,
+                whiteSpace: "pre-line",
               }}
             >
               {threadToDisplay.body}
@@ -146,7 +147,7 @@ export default function ThreadPage() {
                   color: "rgba(0, 0, 0, 0.6)",
                 }}
               >
-                Tags:
+                {threadToDisplay.tags.length === 0 ? "Tags: None" : "Tags:"}
               </Typography>
               {threadToDisplay.tags.map((tag) => (
                 <ThreadTag

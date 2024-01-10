@@ -10,8 +10,16 @@ function App() {
     return { username: "", token: "", iat: 0, exp: 0, isLogin: false };
   }, []);
 
+  const [isLoaded, setIsLoaded] = useState(false);
+
   const [auth, setAuth] = useState(emptyAuth);
-  const resetAuth = useMemo(() => () => setAuth(emptyAuth), [emptyAuth]);
+  const resetAuth = useMemo(
+    () => () => {
+      setAuth(emptyAuth);
+      localStorage.removeItem("token");
+    },
+    [emptyAuth],
+  );
 
   const setAuthFromToken = useMemo(
     () => (token: string) => {
@@ -32,10 +40,13 @@ function App() {
     [emptyAuth],
   );
 
+  // Automatically log in if token is found in local storage
   useEffect(() => {
+    setIsLoaded(false);
     if (localStorage.getItem("token") !== null && localStorage.getItem("token") !== undefined) {
       setAuthFromToken(localStorage.getItem("token") ?? "");
     }
+    setIsLoaded(true);
   }, [setAuthFromToken]);
 
   const value = useMemo(
@@ -43,6 +54,7 @@ function App() {
       auth,
       setAuthFromToken,
       resetAuth,
+      isLoaded: isLoaded,
     }),
     [auth, resetAuth, setAuthFromToken],
   );
