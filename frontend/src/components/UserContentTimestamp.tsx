@@ -1,10 +1,11 @@
 import { ListItemText, Tooltip } from "@mui/material";
 
-export default function UserContentTimestamp(props: Readonly<{
-  createdTimestamp: Date
-  updatedTimestamp: Date
-}>) {
-
+export default function UserContentTimestamp(
+  props: Readonly<{
+    createdTimestamp: Date;
+    updatedTimestamp: Date;
+  }>,
+) {
   const dateFormatOptions: Intl.DateTimeFormatOptions = {
     year: "numeric",
     month: "numeric",
@@ -19,17 +20,17 @@ export default function UserContentTimestamp(props: Readonly<{
   let displayString = ` on ${formattedCreatedTime}`;
   let tooltipString = `Created on ${props.createdTimestamp.toString()}`;
 
-  if (props.updatedTimestamp !== undefined) {
+  if (props.updatedTimestamp !== undefined && props.updatedTimestamp.getTime() !== props.createdTimestamp.getTime()) {
     displayString += ` (edited)`;
     tooltipString += `\n\n Edited on ${props.updatedTimestamp.toString()}`;
   }
 
   return (
-    <Tooltip title={
-      <p style={{ whiteSpace: "pre-line", margin: 0 }}>{tooltipString}</p>
-}>
-  <ListItemText secondary={displayString}
-  sx={{ fontSize: { xs: "0.5rem", sm: "body2" } }} />
-  </Tooltip>
-);
+    <Tooltip title={<p style={{ whiteSpace: "pre-line", margin: 0 }}>{tooltipString}</p>}>
+      <ListItemText
+        secondary={displayString}
+        sx={{ fontSize: { xs: "0.5rem", sm: "body2" } }}
+      />
+    </Tooltip>
+  );
 }

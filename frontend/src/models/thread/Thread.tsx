@@ -4,10 +4,10 @@ export type Thread = {
   title: string;
   body: string;
   creator: string;
-  created_time: Date;
-  updated_time: Date;
+  created_time: string;
+  updated_time: string;
   num_comments: number;
   tags: string[];
-}
+};
 
 export default Thread;

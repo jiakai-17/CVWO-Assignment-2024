@@ -1,10 +1,9 @@
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import { Divider, ListItemText } from "@mui/material";
-import { useEffect, useState } from "react";
-import { Link, Params, useLoaderData } from "react-router-dom";
-import sampleThreads from "../models/thread/SampleThreads.tsx";
+import { CircularProgress, Divider, ListItemText } from "@mui/material";
+import { useContext, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import ThreadTag from "../components/ThreadTag.tsx";
 import UserContentTimestamp from "../components/UserContentTimestamp.tsx";
 import UserAvatarDetails from "../components/UserAvatarDetails.tsx";
@@ -13,13 +12,28 @@ import sampleComments from "../models/comment/SampleComments.tsx";
 import Thread from "../models/thread/Thread.tsx";
 import CommentTextField from "../components/CommentTextField.tsx";
 import { ThreadComment } from "./ThreadComment.tsx";
-
-export async function loader({ params }: { params: Params<"id"> }) {
-  return sampleThreads.find((thread) => thread.id === params.id) ?? null;
-}
+import authContext from "../contexts/AuthContext.tsx";
 
 export default function ThreadPage() {
-  const threadToDisplay = useLoaderData() as Thread;
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [threadToDisplay, setThreadToDisplay] = useState<Thread | null>(null);
+  const { auth } = useContext(authContext);
+
+  useEffect(() => {
+    const id = window.location.pathname.split("/")[2];
+    fetch(`/api/v1/thread/${id}`).then((res) => {
+      if (!res.ok) {
+        setIsLoading(false);
+        res.text().then((text) => setErrorMessage(text));
+        setThreadToDisplay(null);
+      } else {
+        setIsLoading(false);
+        setErrorMessage("");
+        res.json().then((data) => setThreadToDisplay(data));
+      }
+    });
+  }, []);
 
   const [commentContent, setCommentContent] = useState("");
 
@@ -41,7 +55,31 @@ export default function ThreadPage() {
 
   return (
     <Box className={"mt-16"}>
-      {threadToDisplay === null && (
+      <Box sx={{ mx: 4, mb: 4 }}>
+        <Link to={"/"}>
+          <Button
+            variant="outlined"
+            disableElevation
+            size="large"
+          >
+            Back to Home
+          </Button>
+        </Link>
+      </Box>
+
+      {isLoading && (
+        <div className={"flex flex-row justify-center"}>
+          <CircularProgress />
+          <Typography
+            variant="h6"
+            className={"px-6"}
+          >
+            Loading thread...
+          </Typography>
+        </div>
+      )}
+
+      {!isLoading && threadToDisplay === null && (
         <Box
           sx={{
             mx: 2,
@@ -54,33 +92,13 @@ export default function ThreadPage() {
             variant="h4"
             sx={{ mb: 6 }}
           >
-            Thread Not Found
+            {errorMessage}
           </Typography>
-          <Link to={"/"}>
-            <Button
-              variant="contained"
-              disableElevation
-              size="large"
-            >
-              Back to Home
-            </Button>
-          </Link>
         </Box>
       )}
 
-      {threadToDisplay !== null && (
+      {!isLoading && threadToDisplay !== null && (
         <>
-          <Box sx={{ mx: 4, mb: 4 }}>
-            <Link to={"/"}>
-              <Button
-                variant="outlined"
-                disableElevation
-                size="large"
-              >
-                Back to Home
-              </Button>
-            </Link>
-          </Box>
           <Box
             sx={{
               mx: 4,
@@ -177,12 +195,12 @@ export default function ThreadPage() {
                 }}
               >
                 <UserContentTimestamp
-                  createdTimestamp={threadToDisplay.created_time}
-                  updatedTimestamp={threadToDisplay.updated_time}
+                  createdTimestamp={new Date(threadToDisplay.created_time)}
+                  updatedTimestamp={new Date(threadToDisplay.updated_time)}
                 />
               </Box>
             </Box>
-            {threadToDisplay.creator === localStorage.getItem("username") && (
+            {threadToDisplay.creator === auth.username && (
               <>
                 <Divider />
                 <Box className={"my-4 flex items-center justify-end"}>
@@ -214,7 +232,14 @@ export default function ThreadPage() {
             handleSubmit={() => console.log("submit Comment", commentContent)}
           />
           <Divider sx={{ mx: 4, mt: 2, mb: 4 }} />
-          <Box sx={{ mx: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Box
+            sx={{
+              mx: 4,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Typography variant="h5">99 Comments</Typography>
             <SortButton
               availableSortCriteriaMappings={availableCommentSortCriteria}

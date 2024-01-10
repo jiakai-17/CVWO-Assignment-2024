@@ -1,7 +1,7 @@
-import { ChangeEvent, useContext, useEffect, useState } from "react";
+import { ChangeEvent, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import { CircularProgress, Divider, List, ListItem, Pagination, Stack, useMediaQuery } from "@mui/material";
+import { CircularProgress, Divider, IconButton, List, ListItem, Pagination, Stack, useMediaQuery } from "@mui/material";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import SearchButton from "../components/SearchButton.tsx";
@@ -10,29 +10,34 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import ThreadPreview from "../components/ThreadPreview.tsx";
 import AuthContext from "../contexts/AuthContext.tsx";
 import Thread from "../models/thread/Thread.tsx";
+import ClearIcon from "@mui/icons-material/Clear";
 
 export default function Page() {
   const [isLogin, setIsLogin] = useState(false);
   const navigate = useNavigate();
-  const { auth } = useContext(AuthContext);
 
+  // Auth
+  const { auth } = useContext(AuthContext);
   useEffect(() => {
     setIsLogin(auth.isLogin);
   }, [auth.isLogin]);
 
+  // Responsive design
   const isSmallScreen = useMediaQuery("(max-width: 600px)");
 
-  // Searching for threads
-  // Get query from URL, if any
-  const [threads, setThreads] = useState([] as Thread[]);
+  // Search
+  // Get the query from the URL
   const [searchParams] = useSearchParams();
-  const hasQuery = searchParams.has("q");
-  const [searchQuery, setSearchQuery] = useState(hasQuery ? searchParams.get("q") : "");
+  const hasSearchQuery = searchParams.has("q");
+  const [searchQuery, setSearchQuery] = useState(hasSearchQuery ? searchParams.get("q") : "");
 
-  // for the search box
-  const [inputQuery, setInputQuery] = useState("searchQuery");
+  // Query in the search box
+  const [inputQuery, setInputQuery] = useState(hasSearchQuery ? searchParams.get("q") : "");
 
-  // for pagination
+  // List of threads to display
+  const [threads, setThreads] = useState([] as Thread[]);
+
+  // Handle pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(10);
   const handlePageChange = (_event: ChangeEvent<unknown>, value: number) => {
@@ -40,42 +45,24 @@ export default function Page() {
     setCurrentPage(value);
   };
 
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    console.log("input query updated", inputQuery);
-  }, [inputQuery]);
-
-  useEffect(() => {
-    if (hasQuery) {
-      console.log("found query in url", searchQuery);
-      setSearchQuery(searchParams.get("q") ?? "");
-    }
-  }, [searchQuery, searchParams, hasQuery]);
-
-  const handleSearch = () => {
-    console.log("search button clicked", inputQuery);
-    setSearchQuery(inputQuery);
-    navigate("/?q=" + inputQuery);
-  };
-
   // Sorting threads by criteria
   const [threadSortCriteria, setThreadSortCriteria] = useState("Newest first");
+  const availableThreadSortCriteria = useMemo(
+    () =>
+      new Map<string, string>([
+        ["Newest first", "created_time_desc"],
+        ["Oldest first", "created_time_asc"],
+        ["Most comments first", "num_comments_desc"],
+        ["Least comments first", "num_comments_asc"],
+      ]),
+    [],
+  );
 
-  const availableThreadSortCriteria = new Map<string, string>([
-    ["Newest first", "created_time_desc"],
-    ["Oldest first", "created_time_asc"],
-    ["Most comments first", "num_comments_desc"],
-    ["Least comments first", "num_comments_asc"],
-  ]);
+  // API call to search
+  const [isLoading, setIsLoading] = useState(true);
+  const handleSearch = useCallback(() => {
+    console.log("searching...", searchQuery, threadSortCriteria);
 
-  useEffect(() => {
-    console.log(threadSortCriteria);
-  }, [threadSortCriteria]);
-
-  useEffect(() => {
-    setInputQuery(searchQuery ?? "");
-    console.log("search query updated", searchQuery);
     setIsLoading(true);
     fetch(
       "/api/v1/thread?q=" +
@@ -101,7 +88,43 @@ export default function Page() {
         console.log(error);
         setIsLoading(false);
       });
-  }, [currentPage, searchQuery, threadSortCriteria]);
+  }, [availableThreadSortCriteria, currentPage, searchQuery, threadSortCriteria]);
+
+  const updateUrl = (searchQuery: string, sortCriteria: string) => {
+    navigate("/?q=" + searchQuery + "&order=" + availableThreadSortCriteria.get(sortCriteria));
+  };
+
+  // Run a search whenever the page changes
+  useEffect(() => {
+    const hasSearchQuery = searchParams.has("q");
+    console.log("has search query", hasSearchQuery);
+    if (hasSearchQuery) {
+      console.log("found query in url", searchQuery);
+      setSearchQuery(searchParams.get("q") ?? "");
+      setInputQuery(searchParams.get("q") ?? "");
+    }
+    handleSearch();
+  }, [handleSearch, hasSearchQuery, searchParams, searchQuery, setSearchQuery]);
+
+  // Run a search whenever the sort criteria changes
+  const handleSortCriteriaClick = (newCriteria: string) => {
+    setThreadSortCriteria(newCriteria);
+    updateUrl(searchQuery ?? "", newCriteria);
+  };
+  // Run a search whenever the search button is clicked or the enter key is pressed
+  const handleSearchButtonClick = () => {
+    console.log("search requested");
+    setSearchQuery(inputQuery);
+    updateUrl(inputQuery ?? "", threadSortCriteria);
+  };
+
+  const resetSearch = () => {
+    console.log("resetting search");
+    setInputQuery("");
+    setThreadSortCriteria("Newest first");
+    setSearchQuery("");
+    navigate("/");
+  };
 
   return (
     <Box className={"mx-2 mb-10 mt-16 text-center"}>
@@ -123,19 +146,26 @@ export default function Page() {
           onChange={(event) => setInputQuery(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
-              handleSearch();
+              handleSearchButtonClick();
             }
+          }}
+          InputProps={{
+            endAdornment: (
+              <IconButton>
+                <ClearIcon onClick={resetSearch} />
+              </IconButton>
+            ),
           }}
         />
         {isSmallScreen && (
           <>
             <SearchButton
               size={"small"}
-              onClick={handleSearch}
+              onClick={handleSearchButtonClick}
             />
             <SortButton
               availableSortCriteriaMappings={availableThreadSortCriteria}
-              setSortCriteria={setThreadSortCriteria}
+              setSortCriteria={handleSortCriteriaClick}
               size={"small"}
             />
           </>
@@ -148,7 +178,7 @@ export default function Page() {
             />
             <SortButton
               availableSortCriteriaMappings={availableThreadSortCriteria}
-              setSortCriteria={setThreadSortCriteria}
+              setSortCriteria={handleSortCriteriaClick}
               size={"large"}
             />
           </>
@@ -169,50 +199,52 @@ export default function Page() {
           </Link>
         </Box>
       )}
-      {!isLoading && (
-        <Stack alignItems="center">
-          <Pagination
-            count={totalPages}
-            page={currentPage}
-            onChange={handlePageChange}
-          />
-          {threads.length === 0 && (
-            <Typography
-              variant="h6"
-              className={"px-6 py-20"}
-            >
-              No threads found
-            </Typography>
-          )}
-          {threads.length > 0 && (
-            <List sx={{ width: "100%", bgcolor: "background.paper" }}>
-              {threads.map((thread) => (
-                <ListItem key={thread.id}>
-                  <ThreadPreview {...thread} />
-                </ListItem>
-              ))}
-            </List>
-          )}
-          <Pagination
-            count={totalPages}
-            page={currentPage}
-            onChange={handlePageChange}
-          />
-        </Stack>
-      )}
-      {isLoading && (
-        <Stack alignItems={"center"}>
-          <div className={"flex flex-row"}>
-            <CircularProgress />
-            <Typography
-              variant="h6"
-              className={"px-6"}
-            >
-              Loading threads...
-            </Typography>
-          </div>
-        </Stack>
-      )}
+      <div className={"mt-8"}>
+        {!isLoading && (
+          <Stack alignItems="center">
+            <Pagination
+              count={totalPages}
+              page={currentPage}
+              onChange={handlePageChange}
+            />
+            {threads.length === 0 && (
+              <Typography
+                variant="h6"
+                className={"px-6 py-20"}
+              >
+                No threads found
+              </Typography>
+            )}
+            {threads.length > 0 && (
+              <List sx={{ width: "100%", bgcolor: "background.paper" }}>
+                {threads.map((thread) => (
+                  <ListItem key={thread.id}>
+                    <ThreadPreview {...thread} />
+                  </ListItem>
+                ))}
+              </List>
+            )}
+            <Pagination
+              count={totalPages}
+              page={currentPage}
+              onChange={handlePageChange}
+            />
+          </Stack>
+        )}
+        {isLoading && (
+          <Stack alignItems={"center"}>
+            <div className={"flex flex-row"}>
+              <CircularProgress />
+              <Typography
+                variant="h6"
+                className={"px-6"}
+              >
+                Loading threads...
+              </Typography>
+            </div>
+          </Stack>
+        )}
+      </div>
     </Box>
   );
 }

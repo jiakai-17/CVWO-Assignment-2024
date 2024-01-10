@@ -158,6 +158,11 @@ export default function AuthPage(
             onChange={handleUsernameChange}
             error={isInvalidUsername}
             helperText={"Username must be between 1 and 30 characters long and cannot contain spaces"}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                handleSubmit();
+              }
+            }}
           />
           <TextField
             margin="normal"
@@ -172,6 +177,11 @@ export default function AuthPage(
             onChange={handlePasswordChange}
             error={isInvalidPassword}
             helperText={"Password must be at least 6 characters long"}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                handleSubmit();
+              }
+            }}
           />
           {isError && (
             <Typography
