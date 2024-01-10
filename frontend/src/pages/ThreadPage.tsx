@@ -3,7 +3,7 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import { CircularProgress, Divider, ListItemText } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import ThreadTag from "../components/ThreadTag.tsx";
 import UserContentTimestamp from "../components/UserContentTimestamp.tsx";
 import UserAvatarDetails from "../components/UserAvatarDetails.tsx";
@@ -19,6 +19,7 @@ export default function ThreadPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [threadToDisplay, setThreadToDisplay] = useState<Thread | null>(null);
   const { auth } = useContext(authContext);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const id = window.location.pathname.split("/")[2];
@@ -52,6 +53,25 @@ export default function ThreadPage() {
   useEffect(() => {
     console.log(commentSortCriteria);
   }, [commentSortCriteria]);
+
+  const handleDeleteThread = () => {
+    const shouldDelete = confirm("Are you sure you want to delete this thread? This action cannot be undone.");
+    if (shouldDelete) {
+      fetch(`/api/v1/thread/${threadToDisplay?.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${auth.token}`,
+          "Content-Type": "application/json",
+        },
+      }).then((res) => {
+        if (!res.ok) {
+          res.text().then((text) => console.log(text));
+        } else {
+          navigate("/");
+        }
+      });
+    }
+  };
 
   return (
     <Box className={"mt-16"}>
@@ -219,6 +239,7 @@ export default function ThreadPage() {
                     size="large"
                     color="error"
                     sx={{ mr: 2 }}
+                    onClick={handleDeleteThread}
                   >
                     Delete
                   </Button>
