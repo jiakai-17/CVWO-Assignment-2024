@@ -32,7 +32,7 @@ RETURNING id, title, body, creator, created_time, updated_time, num_comments;
 -- name: GetThreadDetails :one
 SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
     CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name)
+    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name ORDER BY tt.tag_name)
         ELSE '{}'::text[]
     END AS tags
 FROM threads t
@@ -46,7 +46,7 @@ GROUP BY t.id;
 -- name: GetThreads :many
 SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
     CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name)
+    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name ORDER BY tt.tag_name)
         ELSE '{}'::text[]
     END AS tags
 FROM threads t
@@ -127,7 +127,7 @@ COMMIT;
 -- name: GetThreadsByMultipleTags :many
 SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
     CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name)
+    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name ORDER BY tt.tag_name)
         ELSE '{}'::text[]
     END AS tags
 FROM threads t
@@ -155,7 +155,7 @@ OFFSET $2;
 -- name: GetThreadsByMultipleKeyword :many
 SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
     CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name)
+    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name ORDER BY tt.tag_name)
         ELSE '{}'::text[]
     END AS tags
 FROM threads t
@@ -177,7 +177,7 @@ OFFSET $2;
 -- name: GetThreadsByMultipleTagsAndKeyword :many
 SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
     CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name)
+    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name ORDER BY tt.tag_name)
         ELSE '{}'::text[]
     END AS tags
 FROM threads t
