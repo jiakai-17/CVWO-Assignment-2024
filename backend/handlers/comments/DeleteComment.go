@@ -53,6 +53,7 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 	// Connect to database
 	ctx := context.Background()
 	conn := database.GetConnection()
+	defer conn.Close(ctx)
 	queries := tutorial.New(conn)
 
 	// Create comment UUID for pg

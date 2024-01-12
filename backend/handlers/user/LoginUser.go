@@ -54,6 +54,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	// Connect to database
 	ctx := context.Background()
 	conn := database.GetConnection()
+	defer conn.Close(ctx)
 	queries := tutorial.New(conn)
 
 	// Check if username exists
