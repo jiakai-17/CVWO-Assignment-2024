@@ -4,8 +4,9 @@ import TextField from "@mui/material/TextField";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import Typography from "@mui/material/Typography";
+import AuthContext from "../contexts/AuthContext.tsx";
 
 export default function CommentTextField(
   props: Readonly<{
@@ -17,7 +18,16 @@ export default function CommentTextField(
     handleCancel?: () => void;
   }>,
 ) {
-  const isLogin = localStorage.getItem("isLogin") === "true";
+  const { auth, isLoaded } = useContext(AuthContext);
+
+  const [isLogin, setIsLogin] = useState(auth.isLogin);
+
+  useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+    setIsLogin(auth.isLogin);
+  }, [auth, isLoaded]);
 
   const [commentContent, setCommentContent] = useState(props.defaultContent ?? "");
 

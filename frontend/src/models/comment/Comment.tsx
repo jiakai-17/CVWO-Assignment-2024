@@ -4,8 +4,8 @@ export type Comment = {
   body: string;
   creator: string;
   thread_id: string;
-  created_time: Date;
-  updated_time: Date;
-}
+  created_time: string;
+  updated_time: string;
+};
 
 export default Comment;

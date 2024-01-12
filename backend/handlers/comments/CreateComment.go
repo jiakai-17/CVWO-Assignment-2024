@@ -31,9 +31,24 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get details from request body
-	thread := r.FormValue("thread")
-	body := r.FormValue("body")
+	type CommentCreate struct {
+		ThreadId string `json:"thread_id"`
+		Body     string `json:"body"`
+	}
+
+	var commentCreate CommentCreate
+
+	err := json.NewDecoder(r.Body).Decode(&commentCreate)
+
+	if err != nil {
+		log.Println("[ERROR] Unable to decode JSON: ", err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Malformed JSON"))
+		return
+	}
+
+	thread := commentCreate.ThreadId
+	body := commentCreate.Body
 
 	// Get JWT token from request header
 	token := r.Header.Get("Authorization")

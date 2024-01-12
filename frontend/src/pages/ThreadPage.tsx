@@ -2,13 +2,13 @@ import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import { CircularProgress, Divider, ListItemText } from "@mui/material";
-import { useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import ThreadTag from "../components/ThreadTag.tsx";
 import UserContentTimestamp from "../components/UserContentTimestamp.tsx";
 import UserAvatarDetails from "../components/UserAvatarDetails.tsx";
 import SortButton from "../components/SortButton.tsx";
-import sampleComments from "../models/comment/SampleComments.tsx";
+import Comment from "../models/comment/Comment.tsx";
 import Thread from "../models/thread/Thread.tsx";
 import CommentTextField from "../components/CommentTextField.tsx";
 import { ThreadComment } from "./ThreadComment.tsx";
@@ -36,23 +36,95 @@ export default function ThreadPage() {
     });
   }, []);
 
-  const [commentContent, setCommentContent] = useState("");
-
-  useEffect(() => {
-    console.log("comment content changed", commentContent);
-  }, [commentContent]);
+  // Fetch comments
+  const [comments, setComments] = useState([] as Comment[]);
+  // Load more comments
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [totalComments, setTotalComments] = useState(threadToDisplay?.num_comments ?? 0);
 
   // Sorting comments by criteria
   const [commentSortCriteria, setCommentSortCriteria] = useState("Newest first");
 
-  const availableCommentSortCriteria = new Map<string, string>([
-    ["Newest first", "date desc"],
-    ["Oldest first", "date asc"],
-  ]);
+  const availableCommentSortCriteria = useMemo(
+    () =>
+      new Map<string, string>([
+        ["Newest first", "created_time_desc"],
+        ["Oldest first", "created_time_asc"],
+      ]),
+    [],
+  );
+
+  const commentsPerPage = 10;
+
+  const fetchComments = useCallback(() => {
+    console.log(
+      "fetching comments",
+      availableCommentSortCriteria,
+      commentSortCriteria,
+      comments,
+      currentPage,
+      threadToDisplay?.id,
+    );
+    const sortCriteria = availableCommentSortCriteria.get(commentSortCriteria);
+    fetch(`/api/v1/thread/${threadToDisplay?.id}/comments?p=${currentPage}&order=${sortCriteria}`).then((res) => {
+      if (!res.ok) {
+        res.text().then((text) => console.log(text));
+      } else {
+        console.log(comments);
+        res.json().then((data) => {
+          setComments(comments.concat(data.comments));
+          setTotalPages(Math.max(1, Math.ceil(data.count / commentsPerPage)));
+          setTotalComments(data.count);
+        });
+      }
+    });
+  }, [availableCommentSortCriteria, commentSortCriteria, currentPage, threadToDisplay?.id]);
 
   useEffect(() => {
-    console.log(commentSortCriteria);
-  }, [commentSortCriteria]);
+    fetchComments();
+  }, [fetchComments]);
+
+  // Adding Comments
+  const [commentContent, setCommentContent] = useState("");
+  useEffect(() => {
+    console.log("comment content changed", commentContent);
+  }, [commentContent]);
+
+  const handleSubmitComment = () => {
+    if (commentContent.trim() == "") {
+      return;
+    }
+    console.log("submit comment", commentContent);
+    fetch(`/api/v1/comment/create`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${auth.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        thread_id: threadToDisplay?.id,
+        body: commentContent,
+      }),
+    }).then((res) => {
+      if (!res.ok) {
+        res.text().then((text) => {
+          console.log(text);
+        });
+      } else {
+        res.json().then((data) => console.log(data));
+        setComments([]);
+        setCurrentPage(1);
+      }
+    });
+  };
+
+  const handleLoadMoreComments = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
 
   const handleDeleteThread = () => {
     const shouldDelete = confirm("Are you sure you want to delete this thread? This action cannot be undone.");
@@ -71,6 +143,11 @@ export default function ThreadPage() {
         }
       });
     }
+  };
+
+  // delete comment
+  const deleteComment = (commentId: string) => {
+    setComments(comments.filter((comment) => comment.id !== commentId));
   };
 
   return (
@@ -251,7 +328,7 @@ export default function ThreadPage() {
           <Divider sx={{ mx: 4, my: 4 }} />
           <CommentTextField
             setCommentContent={setCommentContent}
-            handleSubmit={() => console.log("submit Comment", commentContent)}
+            handleSubmit={handleSubmitComment}
           />
           <Divider sx={{ mx: 4, mt: 2, mb: 4 }} />
           <Box
@@ -262,20 +339,38 @@ export default function ThreadPage() {
               alignItems: "center",
             }}
           >
-            <Typography variant="h5">99 Comments</Typography>
+            <Typography variant="h5">
+              {totalComments} Comment{totalComments == 1 ? "" : "s"}
+            </Typography>
             <SortButton
               availableSortCriteriaMappings={availableCommentSortCriteria}
-              setSortCriteria={setCommentSortCriteria}
+              setSortCriteria={(s) => {
+                setComments([]);
+                setCommentSortCriteria(s);
+                setCurrentPage(1);
+              }}
               size={"large"}
             />
           </Box>
           <Box sx={{ mx: 4, mb: 20 }}>
-            {sampleComments.map((comment) => (
+            {comments.map((comment) => (
               <ThreadComment
                 key={comment.id}
                 comment={comment}
+                deleteComment={deleteComment}
               />
             ))}
+            {currentPage < totalPages && (
+              <Button
+                variant="outlined"
+                disableElevation
+                size="large"
+                sx={{ mx: "auto" }}
+                onClick={handleLoadMoreComments}
+              >
+                Load more comments
+              </Button>
+            )}
           </Box>
         </>
       )}

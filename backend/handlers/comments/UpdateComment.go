@@ -5,6 +5,7 @@ import (
 	"backend/tutorial"
 	"backend/utils"
 	"context"
+	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5/pgtype"
 	"log"
@@ -32,7 +33,23 @@ func UpdateComment(w http.ResponseWriter, r *http.Request) {
 	// Get details from request body
 	commentId := mux.Vars(r)["id"]
 	utils.Log("updateComment", "[DEBUG] Comment ID: "+commentId, nil)
-	body := r.FormValue("body")
+
+	type CommentUpdate struct {
+		Body string `json:"body"`
+	}
+
+	var commentUpdate CommentUpdate
+
+	err := json.NewDecoder(r.Body).Decode(&commentUpdate)
+
+	if err != nil {
+		log.Println("[ERROR] Unable to decode JSON: ", err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Malformed JSON"))
+		return
+	}
+
+	body := commentUpdate.Body
 
 	// Get JWT token from request header
 	token := r.Header.Get("Authorization")

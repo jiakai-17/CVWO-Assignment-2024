@@ -36,7 +36,7 @@ func GetComment(w http.ResponseWriter, r *http.Request) {
 	// Get details from request body
 	id := mux.Vars(r)["thread_id"]
 	order := r.FormValue("order")
-	page := r.FormValue("page")
+	page := r.FormValue("p")
 
 	// Available sorting orders
 	availableSortOrders := []string{"created_time_asc", "created_time_desc"}
@@ -57,6 +57,7 @@ func GetComment(w http.ResponseWriter, r *http.Request) {
 	// Connect to database
 	ctx := context.Background()
 	conn := database.GetConnection()
+	defer conn.Close(ctx)
 	queries := tutorial.New(conn)
 
 	var threadUUID pgtype.UUID
@@ -76,9 +77,26 @@ func GetComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	commentsCount, err := queries.GetCommentCount(ctx, threadUUID)
+
+	if err != nil {
+		log.Println("[ERROR] Unable to get comments of thread: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	type response struct {
+		Comments []tutorial.Comment `json:"comments"`
+		Count    int32              `json:"count"`
+	}
+
+	var resp response
+	resp.Comments = comments
+	resp.Count = int32(commentsCount)
+
 	// Return comments as JSON object
 	w.Header().Set("Content-Type", "application/json")
-	jsonErr := json.NewEncoder(w).Encode(comments)
+	jsonErr := json.NewEncoder(w).Encode(resp)
 
 	if jsonErr != nil {
 		log.Println("[ERROR] Unable to encode comments as JSON: ", err)
