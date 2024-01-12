@@ -67,6 +67,7 @@ SELECT EXISTS
     (SELECT 1 FROM threads WHERE id = $1 AND creator = $2)
 AS is_thread_creator;
 
+
 -- Updates the thread with the given id.
 -- name: UpdateThread :exec
 UPDATE threads
@@ -94,6 +95,7 @@ WHERE thread_id = $1;
 DELETE FROM thread_tags
 WHERE thread_id = $1;
 
+
 -- Deletes tags that are not associated with any threads.
 -- name: DeleteUnusedTags :exec
 DELETE FROM tags
@@ -101,6 +103,7 @@ WHERE name NOT IN (
     SELECT DISTINCT tag_name
     FROM thread_tags
 );
+
 
 -- Adds new tags to the database if they do not already exist.
 -- name: AddNewTags :exec
@@ -112,55 +115,46 @@ WHERE new_tags NOT IN (
     WHERE name = new_tags)
 ON CONFLICT DO NOTHING;
 
+
 -- Adds tags to a thread if they do not already exist.
 -- name: AddThreadTags :exec
 INSERT INTO thread_tags (thread_id, tag_name)
 SELECT $1 as thread_id,
        unnest(@tagArray::text[]) as tag_name
 ON CONFLICT DO NOTHING;
-COMMIT;
 
 
-
--- Returns the details of threads that match all the given tags.
--- Sort order should be one of 'created_time_asc', 'created_time_desc', 'num_comments_asc', 'num_comments_desc'.
--- name: GetThreadsByMultipleTags :many
+-- Returns the threads that match the keywords and tags.
+-- If the keyword is provided, only threads that match all the keywords will be returned.
+-- If the tags are provided, only threads that match all the tags will be returned.
+-- name: GetThreadsByCriteria :many
 SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
+    -- Concatenate all the tags of the thread into an array.
     CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name ORDER BY tt.tag_name)
-        ELSE '{}'::text[]
-    END AS tags
-FROM threads t
-INNER JOIN thread_tags tt ON t.id = tt.thread_id
-WHERE t.id IN (
-    SELECT tt.thread_id
-    FROM thread_tags tt
-    WHERE tt.tag_name = ANY(@tagArray::text[])
-    GROUP BY tt.thread_id
-    HAVING COUNT(DISTINCT tt.tag_name) = ARRAY_LENGTH(@tagArray::text[], 1)
-)
-GROUP BY t.id
-ORDER BY
-    CASE WHEN @sortOrder::text = 'created_time_asc' THEN t.created_time END ASC,
-    CASE WHEN @sortOrder::text = 'created_time_desc' THEN t.created_time END DESC,
-    CASE WHEN @sortOrder::text = 'num_comments_asc' THEN t.num_comments END ASC,
-    CASE WHEN @sortOrder::text = 'num_comments_desc' THEN t.num_comments END DESC
-LIMIT $1
-OFFSET $2;
-
-
--- Returns the details of threads that match all the given keywords.
--- Keywords should be a single string, with each word separated by &.
--- Sort order should be one of 'created_time_asc', 'created_time_desc', 'num_comments_asc', 'num_comments_desc'.
--- name: GetThreadsByMultipleKeyword :many
-SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
-    CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name ORDER BY tt.tag_name)
-        ELSE '{}'::text[]
+       WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name ORDER BY tt.tag_name)
+       ELSE '{}'::text[]
     END AS tags
 FROM threads t
 LEFT JOIN thread_tags tt ON t.id = tt.thread_id
-WHERE TO_TSVECTOR('simple', t.title || ' ' || t.body) @@ TO_TSQUERY('simple', @keywords::text)
+WHERE
+    -- Handle the case where the keyword is empty (NULL).
+    CASE
+        WHEN LENGTH(@keywords::text) > 0 THEN TO_TSVECTOR('simple', t.title || ' ' || t.body) @@ TO_TSQUERY
+('simple', @keywords::text)
+        ELSE TRUE
+    END
+AND
+    -- Handle the case where the tag array is empty.
+    CASE
+        WHEN ARRAY_LENGTH(@tagArray::text[], 1) > 0 THEN t.id IN (
+            SELECT tt.thread_id
+            FROM thread_tags tt
+            WHERE tt.tag_name = ANY(@tagArray::text[])
+            GROUP BY tt.thread_id
+            HAVING COUNT(DISTINCT tt.tag_name) = ARRAY_LENGTH(@tagArray::text[], 1)
+        )
+        ELSE TRUE
+    END
 GROUP BY t.id
 ORDER BY
     CASE WHEN @sortOrder::text = 'created_time_asc' THEN created_time END ASC,
@@ -170,35 +164,26 @@ ORDER BY
 LIMIT $1
 OFFSET $2;
 
-
--- Returns the details of threads that match all the given tags and keywords.
--- Keywords should be a single string, with each word separated by &.
--- Sort order should be one of 'created_time_asc', 'created_time_desc', 'num_comments_asc', 'num_comments_desc'.
--- name: GetThreadsByMultipleTagsAndKeyword :many
-SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
-    CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name ORDER BY tt.tag_name)
-        ELSE '{}'::text[]
-    END AS tags
+-- Counts the total number of threads that match the keywords and tags.
+-- name: GetThreadsByCriteriaCount :one
+SELECT COUNT(*) AS total_items
 FROM threads t
-LEFT JOIN thread_tags tt ON t.id = tt.thread_id
-WHERE TO_TSVECTOR('simple', t.title || ' ' || t.body) @@ TO_TSQUERY('simple', @keywords::text)
-AND t.id IN (
-    SELECT tt.thread_id
-    FROM thread_tags tt
-    WHERE tt.tag_name = ANY (@tagArray::text[])
-    GROUP BY tt.thread_id
-    HAVING COUNT (DISTINCT tt.tag_name) = ARRAY_LENGTH(@tagArray::text[]
-    , 1)
-    )
-GROUP BY t.id
-ORDER BY
-    CASE WHEN @sortOrder::text = 'created_time_asc' THEN created_time END ASC,
-    CASE WHEN @sortOrder::text = 'created_time_desc' THEN created_time END DESC,
-    CASE WHEN @sortOrder::text = 'num_comments_asc' THEN num_comments END ASC,
-    CASE WHEN @sortOrder::text = 'num_comments_desc' THEN num_comments END DESC
-LIMIT $1
-OFFSET $2;
+WHERE
+    CASE
+        WHEN LENGTH(@keywords::text) > 0 THEN TO_TSVECTOR('simple', t.title || ' ' || t.body) @@ TO_TSQUERY('simple', @keywords::text)
+        ELSE TRUE
+    END
+  AND
+    CASE
+        WHEN ARRAY_LENGTH(@tagArray::text[], 1) > 0 THEN t.id IN (
+          SELECT tt.thread_id
+          FROM thread_tags tt
+          WHERE tt.tag_name = ANY(@tagArray::text[])
+          GROUP BY tt.thread_id
+          HAVING COUNT(DISTINCT tt.tag_name) = ARRAY_LENGTH(@tagArray::text[], 1)
+        )
+        ELSE TRUE
+    END;
 
 
 -- Creates a new comment with the given body, creator, and thread_id. Returns the details of the created comment.
@@ -219,6 +204,13 @@ ORDER BY
     CASE WHEN @sortOrder::text = 'created_time_desc' THEN created_time END DESC
 LIMIT $2
 OFFSET $3;
+
+
+-- Counts the total number of comments for a thread.
+-- name: GetCommentCount :one
+SELECT COUNT(*) AS total_items
+FROM comments
+WHERE thread_id = $1;
 
 -- Checks if a user is the creator of a comment.
 -- name: CheckCommentCreator :one

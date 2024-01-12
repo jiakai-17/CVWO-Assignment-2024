@@ -38,8 +38,9 @@ export default function Page() {
   const [threads, setThreads] = useState([] as Thread[]);
 
   // Handle pagination
+  const threadsPerPage = 10;
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, _setTotalPages] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
   const handlePageChange = (_event: ChangeEvent<unknown>, value: number) => {
     console.log("page changed", value);
     setCurrentPage(value);
@@ -81,7 +82,8 @@ export default function Page() {
       })
       .then((data) => {
         console.log(data);
-        setThreads(data);
+        setThreads(data.threads);
+        setTotalPages(Math.max(1, Math.ceil(data.total_threads / threadsPerPage)));
         setIsLoading(false);
       })
       .catch((error) => {
@@ -113,7 +115,7 @@ export default function Page() {
   };
   // Run a search whenever the search button is clicked or the enter key is pressed
   const handleSearchButtonClick = () => {
-    console.log("search requested");
+    console.log("search requested", inputQuery);
     setSearchQuery(inputQuery);
     updateUrl(inputQuery ?? "", threadSortCriteria);
   };
@@ -174,7 +176,7 @@ export default function Page() {
           <>
             <SearchButton
               size={"large"}
-              onClick={handleSearch}
+              onClick={handleSearchButtonClick}
             />
             <SortButton
               availableSortCriteriaMappings={availableThreadSortCriteria}

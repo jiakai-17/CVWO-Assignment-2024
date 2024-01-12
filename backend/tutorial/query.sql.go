@@ -230,6 +230,20 @@ func (q *Queries) DeleteUnusedTags(ctx context.Context) error {
 	return err
 }
 
+const getCommentCount = `-- name: GetCommentCount :one
+SELECT COUNT(*) AS total_items
+FROM comments
+WHERE thread_id = $1
+`
+
+// Counts the total number of comments for a thread.
+func (q *Queries) GetCommentCount(ctx context.Context, threadID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, getCommentCount, threadID)
+	var total_items int64
+	err := row.Scan(&total_items)
+	return total_items, err
+}
+
 const getComments = `-- name: GetComments :many
 SELECT id, body, creator, thread_id, created_time, updated_time
 FROM comments
@@ -429,176 +443,34 @@ func (q *Queries) GetThreads(ctx context.Context, arg GetThreadsParams) ([]GetTh
 	return items, nil
 }
 
-const getThreadsByMultipleKeyword = `-- name: GetThreadsByMultipleKeyword :many
+const getThreadsByCriteria = `-- name: GetThreadsByCriteria :many
 SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
+    -- Concatenate all the tags of the thread into an array.
     CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name ORDER BY tt.tag_name)
-        ELSE '{}'::text[]
+       WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name ORDER BY tt.tag_name)
+       ELSE '{}'::text[]
     END AS tags
 FROM threads t
 LEFT JOIN thread_tags tt ON t.id = tt.thread_id
-WHERE TO_TSVECTOR('simple', t.title || ' ' || t.body) @@ TO_TSQUERY('simple', $3::text)
-GROUP BY t.id
-ORDER BY
-    CASE WHEN $4::text = 'created_time_asc' THEN created_time END ASC,
-    CASE WHEN $4::text = 'created_time_desc' THEN created_time END DESC,
-    CASE WHEN $4::text = 'num_comments_asc' THEN num_comments END ASC,
-    CASE WHEN $4::text = 'num_comments_desc' THEN num_comments END DESC
-LIMIT $1
-OFFSET $2
-`
-
-type GetThreadsByMultipleKeywordParams struct {
-	Limit     int32  `json:"limit"`
-	Offset    int32  `json:"offset"`
-	Keywords  string `json:"keywords"`
-	Sortorder string `json:"sortorder"`
-}
-
-type GetThreadsByMultipleKeywordRow struct {
-	ID          pgtype.UUID        `json:"id"`
-	Title       string             `json:"title"`
-	Body        string             `json:"body"`
-	Creator     string             `json:"creator"`
-	CreatedTime pgtype.Timestamptz `json:"created_time"`
-	UpdatedTime pgtype.Timestamptz `json:"updated_time"`
-	NumComments int32              `json:"num_comments"`
-	Tags        []string           `json:"tags"`
-}
-
-// Returns the details of threads that match all the given keywords.
-// Keywords should be a single string, with each word separated by &.
-// Sort order should be one of 'created_time_asc', 'created_time_desc', 'num_comments_asc', 'num_comments_desc'.
-func (q *Queries) GetThreadsByMultipleKeyword(ctx context.Context, arg GetThreadsByMultipleKeywordParams) ([]GetThreadsByMultipleKeywordRow, error) {
-	rows, err := q.db.Query(ctx, getThreadsByMultipleKeyword,
-		arg.Limit,
-		arg.Offset,
-		arg.Keywords,
-		arg.Sortorder,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GetThreadsByMultipleKeywordRow{}
-	for rows.Next() {
-		var i GetThreadsByMultipleKeywordRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Title,
-			&i.Body,
-			&i.Creator,
-			&i.CreatedTime,
-			&i.UpdatedTime,
-			&i.NumComments,
-			&i.Tags,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getThreadsByMultipleTags = `-- name: GetThreadsByMultipleTags :many
-SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
+WHERE
+    -- Handle the case where the keyword is empty (NULL).
     CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name ORDER BY tt.tag_name)
-        ELSE '{}'::text[]
-    END AS tags
-FROM threads t
-INNER JOIN thread_tags tt ON t.id = tt.thread_id
-WHERE t.id IN (
-    SELECT tt.thread_id
-    FROM thread_tags tt
-    WHERE tt.tag_name = ANY($3::text[])
-    GROUP BY tt.thread_id
-    HAVING COUNT(DISTINCT tt.tag_name) = ARRAY_LENGTH($3::text[], 1)
-)
-GROUP BY t.id
-ORDER BY
-    CASE WHEN $4::text = 'created_time_asc' THEN t.created_time END ASC,
-    CASE WHEN $4::text = 'created_time_desc' THEN t.created_time END DESC,
-    CASE WHEN $4::text = 'num_comments_asc' THEN t.num_comments END ASC,
-    CASE WHEN $4::text = 'num_comments_desc' THEN t.num_comments END DESC
-LIMIT $1
-OFFSET $2
-`
-
-type GetThreadsByMultipleTagsParams struct {
-	Limit     int32    `json:"limit"`
-	Offset    int32    `json:"offset"`
-	Tagarray  []string `json:"tagarray"`
-	Sortorder string   `json:"sortorder"`
-}
-
-type GetThreadsByMultipleTagsRow struct {
-	ID          pgtype.UUID        `json:"id"`
-	Title       string             `json:"title"`
-	Body        string             `json:"body"`
-	Creator     string             `json:"creator"`
-	CreatedTime pgtype.Timestamptz `json:"created_time"`
-	UpdatedTime pgtype.Timestamptz `json:"updated_time"`
-	NumComments int32              `json:"num_comments"`
-	Tags        []string           `json:"tags"`
-}
-
-// Returns the details of threads that match all the given tags.
-// Sort order should be one of 'created_time_asc', 'created_time_desc', 'num_comments_asc', 'num_comments_desc'.
-func (q *Queries) GetThreadsByMultipleTags(ctx context.Context, arg GetThreadsByMultipleTagsParams) ([]GetThreadsByMultipleTagsRow, error) {
-	rows, err := q.db.Query(ctx, getThreadsByMultipleTags,
-		arg.Limit,
-		arg.Offset,
-		arg.Tagarray,
-		arg.Sortorder,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GetThreadsByMultipleTagsRow{}
-	for rows.Next() {
-		var i GetThreadsByMultipleTagsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Title,
-			&i.Body,
-			&i.Creator,
-			&i.CreatedTime,
-			&i.UpdatedTime,
-			&i.NumComments,
-			&i.Tags,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getThreadsByMultipleTagsAndKeyword = `-- name: GetThreadsByMultipleTagsAndKeyword :many
-SELECT t.id, t.title, t.body, t.creator, t.created_time, t.updated_time, t.num_comments,
+        WHEN LENGTH($3::text) > 0 THEN TO_TSVECTOR('simple', t.title || ' ' || t.body) @@ TO_TSQUERY
+('simple', $3::text)
+        ELSE TRUE
+    END
+AND
+    -- Handle the case where the tag array is empty.
     CASE
-    WHEN COUNT(tt.tag_name) > 0 THEN ARRAY_AGG(tt.tag_name ORDER BY tt.tag_name)
-        ELSE '{}'::text[]
-    END AS tags
-FROM threads t
-LEFT JOIN thread_tags tt ON t.id = tt.thread_id
-WHERE TO_TSVECTOR('simple', t.title || ' ' || t.body) @@ TO_TSQUERY('simple', $3::text)
-AND t.id IN (
-    SELECT tt.thread_id
-    FROM thread_tags tt
-    WHERE tt.tag_name = ANY ($4::text[])
-    GROUP BY tt.thread_id
-    HAVING COUNT (DISTINCT tt.tag_name) = ARRAY_LENGTH($4::text[]
-    , 1)
-    )
+        WHEN ARRAY_LENGTH($4::text[], 1) > 0 THEN t.id IN (
+            SELECT tt.thread_id
+            FROM thread_tags tt
+            WHERE tt.tag_name = ANY($4::text[])
+            GROUP BY tt.thread_id
+            HAVING COUNT(DISTINCT tt.tag_name) = ARRAY_LENGTH($4::text[], 1)
+        )
+        ELSE TRUE
+    END
 GROUP BY t.id
 ORDER BY
     CASE WHEN $5::text = 'created_time_asc' THEN created_time END ASC,
@@ -609,7 +481,7 @@ LIMIT $1
 OFFSET $2
 `
 
-type GetThreadsByMultipleTagsAndKeywordParams struct {
+type GetThreadsByCriteriaParams struct {
 	Limit     int32    `json:"limit"`
 	Offset    int32    `json:"offset"`
 	Keywords  string   `json:"keywords"`
@@ -617,7 +489,7 @@ type GetThreadsByMultipleTagsAndKeywordParams struct {
 	Sortorder string   `json:"sortorder"`
 }
 
-type GetThreadsByMultipleTagsAndKeywordRow struct {
+type GetThreadsByCriteriaRow struct {
 	ID          pgtype.UUID        `json:"id"`
 	Title       string             `json:"title"`
 	Body        string             `json:"body"`
@@ -628,11 +500,11 @@ type GetThreadsByMultipleTagsAndKeywordRow struct {
 	Tags        []string           `json:"tags"`
 }
 
-// Returns the details of threads that match all the given tags and keywords.
-// Keywords should be a single string, with each word separated by &.
-// Sort order should be one of 'created_time_asc', 'created_time_desc', 'num_comments_asc', 'num_comments_desc'.
-func (q *Queries) GetThreadsByMultipleTagsAndKeyword(ctx context.Context, arg GetThreadsByMultipleTagsAndKeywordParams) ([]GetThreadsByMultipleTagsAndKeywordRow, error) {
-	rows, err := q.db.Query(ctx, getThreadsByMultipleTagsAndKeyword,
+// Returns the threads that match the keywords and tags.
+// If the keyword is provided, only threads that match all the keywords will be returned.
+// If the tags are provided, only threads that match all the tags will be returned.
+func (q *Queries) GetThreadsByCriteria(ctx context.Context, arg GetThreadsByCriteriaParams) ([]GetThreadsByCriteriaRow, error) {
+	rows, err := q.db.Query(ctx, getThreadsByCriteria,
 		arg.Limit,
 		arg.Offset,
 		arg.Keywords,
@@ -643,9 +515,9 @@ func (q *Queries) GetThreadsByMultipleTagsAndKeyword(ctx context.Context, arg Ge
 		return nil, err
 	}
 	defer rows.Close()
-	items := []GetThreadsByMultipleTagsAndKeywordRow{}
+	items := []GetThreadsByCriteriaRow{}
 	for rows.Next() {
-		var i GetThreadsByMultipleTagsAndKeywordRow
+		var i GetThreadsByCriteriaRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
@@ -664,6 +536,40 @@ func (q *Queries) GetThreadsByMultipleTagsAndKeyword(ctx context.Context, arg Ge
 		return nil, err
 	}
 	return items, nil
+}
+
+const getThreadsByCriteriaCount = `-- name: GetThreadsByCriteriaCount :one
+SELECT COUNT(*) AS total_items
+FROM threads t
+WHERE
+    CASE
+        WHEN LENGTH($1::text) > 0 THEN TO_TSVECTOR('simple', t.title || ' ' || t.body) @@ TO_TSQUERY('simple', $1::text)
+        ELSE TRUE
+    END
+  AND
+    CASE
+        WHEN ARRAY_LENGTH($2::text[], 1) > 0 THEN t.id IN (
+          SELECT tt.thread_id
+          FROM thread_tags tt
+          WHERE tt.tag_name = ANY($2::text[])
+          GROUP BY tt.thread_id
+          HAVING COUNT(DISTINCT tt.tag_name) = ARRAY_LENGTH($2::text[], 1)
+        )
+        ELSE TRUE
+    END
+`
+
+type GetThreadsByCriteriaCountParams struct {
+	Keywords string   `json:"keywords"`
+	Tagarray []string `json:"tagarray"`
+}
+
+// Counts the total number of threads that match the keywords and tags.
+func (q *Queries) GetThreadsByCriteriaCount(ctx context.Context, arg GetThreadsByCriteriaCountParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getThreadsByCriteriaCount, arg.Keywords, arg.Tagarray)
+	var total_items int64
+	err := row.Scan(&total_items)
+	return total_items, err
 }
 
 const updateComment = `-- name: UpdateComment :exec

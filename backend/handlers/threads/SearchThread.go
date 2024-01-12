@@ -12,6 +12,11 @@ import (
 	"strings"
 )
 
+type Pagination struct {
+	TotalPages  int `json:"total_pages"`
+	CurrentPage int `json:"current_page"`
+}
+
 // SearchThread Handler for /api/v1/searchThread
 func SearchThread(w http.ResponseWriter, r *http.Request) {
 	// Only GET
@@ -53,130 +58,53 @@ func SearchThread(w http.ResponseWriter, r *http.Request) {
 
 	keywords := strings.Split(queryString, " ")
 
-	if queryString == "" || len(keywords) == 0 {
-		// Return all threads
-		// Get threads
-		log.Println("[INFO] Getting all threads", order)
-		threads, err := queries.GetThreads(ctx, tutorial.GetThreadsParams{
-			Limit:     int32(size),
-			Offset:    int32(offset),
-			Sortorder: order,
-		})
+	var parsedKeywords []string
+	var tagArray []string
 
-		if err != nil {
-			log.Println("[ERROR] Unable to get threads: ", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		jsonErr := json.NewEncoder(w).Encode(threads)
-
-		if jsonErr != nil {
-			log.Println("[ERROR] Unable to encode threads as JSON: ", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		return
-
-	} else {
-
-		var parsedKeywords []string
-		var tags []string
-
-		for _, keyword := range keywords {
-			if strings.HasPrefix(keyword, "tag:") {
-				tags = append(tags, keyword[4:])
-			} else {
-				parsedKeywords = append(parsedKeywords, keyword)
-			}
-		}
-
-		if len(parsedKeywords) > 0 && len(tags) > 0 {
-			// Complex Search with tags and text
-			log.Println("[INFO] Search by both keyword and tag", order)
-
-			threads, err := queries.GetThreadsByMultipleTagsAndKeyword(ctx,
-				tutorial.GetThreadsByMultipleTagsAndKeywordParams{
-					Limit:     int32(size),
-					Offset:    int32(offset),
-					Sortorder: order,
-					Keywords:  strings.Join(parsedKeywords, " & "),
-					Tagarray:  tags,
-				})
-
-			if err != nil {
-				log.Println("[ERROR] Unable to get threads: ", err)
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
-			w.Header().Set("Content-Type", "application/json")
-			jsonErr := json.NewEncoder(w).Encode(threads)
-
-			if jsonErr != nil {
-				log.Println("[ERROR] Unable to encode threads as JSON: ", err)
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
-			return
-		} else if len(parsedKeywords) > 0 {
-			// Search with text only
-			log.Println("[INFO] Search by keyword only", order)
-
-			threads, err := queries.GetThreadsByMultipleKeyword(ctx, tutorial.GetThreadsByMultipleKeywordParams{
-				Limit:     int32(size),
-				Offset:    int32(offset),
-				Sortorder: order,
-				Keywords:  strings.Join(parsedKeywords, " & "),
-			})
-
-			if err != nil {
-				log.Println("[ERROR] Unable to get threads: ", err)
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
-			w.Header().Set("Content-Type", "application/json")
-			jsonErr := json.NewEncoder(w).Encode(threads)
-
-			if jsonErr != nil {
-				log.Println("[ERROR] Unable to encode threads as JSON: ", err)
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
-			return
+	for _, keyword := range keywords {
+		if strings.HasPrefix(keyword, "tag:") {
+			tagArray = append(tagArray, keyword[4:])
 		} else {
-			// Search with tags only
-
-			log.Println("[INFO] Search by tag only", order)
-
-			threads, err := queries.GetThreadsByMultipleTags(ctx, tutorial.GetThreadsByMultipleTagsParams{
-				Limit:     int32(size),
-				Offset:    int32(offset),
-				Sortorder: order,
-				Tagarray:  tags,
-			})
-
-			if err != nil {
-				log.Println("[ERROR] Unable to get threads: ", err)
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
-			w.Header().Set("Content-Type", "application/json")
-			jsonErr := json.NewEncoder(w).Encode(threads)
-
-			if jsonErr != nil {
-				log.Println("[ERROR] Unable to encode threads as JSON: ", err)
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
-			return
+			parsedKeywords = append(parsedKeywords, keyword)
 		}
 	}
+
+	formattedSearchQuery := strings.Join(parsedKeywords, " & ")
+
+	// Get threads
+	log.Println("[INFO] Getting threads", order, formattedSearchQuery, tagArray)
+	threads, err := queries.GetThreadsByCriteria(ctx, tutorial.GetThreadsByCriteriaParams{
+		Limit:     int32(size),
+		Offset:    int32(offset),
+		Sortorder: order,
+		Keywords:  formattedSearchQuery,
+		Tagarray:  tagArray,
+	})
+
+	totalThreads, err := queries.GetThreadsByCriteriaCount(ctx, tutorial.GetThreadsByCriteriaCountParams{
+		Keywords: formattedSearchQuery,
+		Tagarray: tagArray,
+	})
+
+	type response struct {
+		TotalThreads int                                `json:"total_threads"`
+		Threads      []tutorial.GetThreadsByCriteriaRow `json:"threads"`
+	}
+
+	if err != nil {
+		log.Println("[ERROR] Unable to get threads: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	jsonErr := json.NewEncoder(w).Encode(response{int(totalThreads), threads})
+
+	if jsonErr != nil {
+		log.Println("[ERROR] Unable to encode threads as JSON: ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	return
 }
