@@ -2,7 +2,7 @@ import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import { CircularProgress, Divider, ListItemText } from "@mui/material";
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import ThreadTag from "../components/ThreadTag.tsx";
 import UserContentTimestamp from "../components/UserContentTimestamp.tsx";
@@ -58,33 +58,45 @@ export default function ThreadPage() {
 
   const commentsPerPage = 10;
 
-  const fetchComments = useCallback(() => {
-    console.log(
-      "fetching comments",
-      availableCommentSortCriteria,
-      commentSortCriteria,
-      comments,
-      currentPage,
-      threadToDisplay?.id,
-    );
+  const fetchComments = (page: number, commentSortCriteria: string, shouldAppend: boolean) => {
+    if (threadToDisplay === null) {
+      return;
+    }
+    setIsLoadingComments(true);
+    setCurrentPage(page);
     const sortCriteria = availableCommentSortCriteria.get(commentSortCriteria);
-    fetch(`/api/v1/thread/${threadToDisplay?.id}/comments?p=${currentPage}&order=${sortCriteria}`).then((res) => {
+    fetch(`/api/v1/thread/${threadToDisplay?.id}/comments?p=${page}&order=${sortCriteria}`).then((res) => {
       if (!res.ok) {
         res.text().then((text) => console.log(text));
+        setIsLoadingComments(false);
       } else {
         console.log(comments);
         res.json().then((data) => {
-          setComments(comments.concat(data.comments));
+          if (shouldAppend) {
+            setComments(comments.concat(data.comments));
+          } else {
+            setComments(data.comments);
+          }
           setTotalPages(Math.max(1, Math.ceil(data.count / commentsPerPage)));
           setTotalComments(data.count);
+          setIsLoadingComments(false);
         });
       }
     });
-  }, [availableCommentSortCriteria, commentSortCriteria, currentPage, threadToDisplay?.id]);
+  };
 
+  // fetch on load
   useEffect(() => {
-    fetchComments();
-  }, [fetchComments]);
+    if (threadToDisplay === null) {
+      return;
+    }
+    fetchComments(1, commentSortCriteria, false);
+  }, [threadToDisplay]);
+
+  const handleSetCommentSortCriteria = (criteria: string) => {
+    setCommentSortCriteria(criteria);
+    fetchComments(1, criteria, false);
+  };
 
   // Adding Comments
   const [commentContent, setCommentContent] = useState("");
@@ -114,15 +126,15 @@ export default function ThreadPage() {
         });
       } else {
         res.json().then((data) => console.log(data));
-        setComments([]);
-        setCurrentPage(1);
+        setCommentContent("");
+        fetchComments(1, commentSortCriteria, false);
       }
     });
   };
 
   const handleLoadMoreComments = () => {
     if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
+      fetchComments(currentPage + 1, commentSortCriteria, true);
     }
   };
 
@@ -146,8 +158,8 @@ export default function ThreadPage() {
   };
 
   // delete comment
-  const deleteComment = (commentId: string) => {
-    setComments(comments.filter((comment) => comment.id !== commentId));
+  const deleteComment = () => {
+    fetchComments(1, commentSortCriteria, false);
   };
 
   return (
@@ -344,11 +356,7 @@ export default function ThreadPage() {
             </Typography>
             <SortButton
               availableSortCriteriaMappings={availableCommentSortCriteria}
-              setSortCriteria={(s) => {
-                setComments([]);
-                setCommentSortCriteria(s);
-                setCurrentPage(1);
-              }}
+              setSortCriteria={handleSetCommentSortCriteria}
               size={"large"}
             />
           </Box>
@@ -360,7 +368,18 @@ export default function ThreadPage() {
                 deleteComment={deleteComment}
               />
             ))}
-            {currentPage < totalPages && (
+            {isLoadingComments && (
+              <div className={"flex flex-row justify-center"}>
+                <CircularProgress />
+                <Typography
+                  variant="h6"
+                  className={"px-6"}
+                >
+                  Loading comments...
+                </Typography>
+              </div>
+            )}
+            {!isLoadingComments && currentPage < totalPages && (
               <Button
                 variant="outlined"
                 disableElevation

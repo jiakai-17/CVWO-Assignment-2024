@@ -12,7 +12,7 @@ import AuthContext from "../contexts/AuthContext.tsx";
 export function ThreadComment(
   props: Readonly<{
     comment: Comment;
-    deleteComment: (id: string) => void;
+    deleteComment: () => void;
   }>,
 ) {
   const [currentComment, setCurrentComment] = useState(props.comment);
@@ -81,7 +81,7 @@ export function ThreadComment(
         } else {
           console.log("delete success");
           setIsDeleted(true);
-          props.deleteComment(props.comment.id);
+          props.deleteComment();
         }
       });
     }
