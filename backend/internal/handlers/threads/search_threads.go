@@ -22,7 +22,7 @@ type SearchThreadResponse struct {
 	Threads      []database.GetThreadsByCriteriaRow `json:"threads"`
 }
 
-// SearchThread godoc
+// SearchThreads godoc
 // @Summary Handles thread search requests
 // @Description Retrieves threads matching the given query
 // @Tags thread
@@ -35,14 +35,14 @@ type SearchThreadResponse struct {
 // @Failure 405 "Method not allowed"
 // @Failure 500 "Internal server error"
 // @Router /thread/search [get]
-func SearchThread(w http.ResponseWriter, r *http.Request) {
+func SearchThreads(w http.ResponseWriter, r *http.Request) {
 	// Only GET
 	if r.Method != http.MethodGet {
-		utils.Log("SearchThread", "Method not allowed", errors.New("method not allowed"))
+		utils.Log("SearchThreads", "Method not allowed", errors.New("method not allowed"))
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		_, err := w.Write([]byte("Method not allowed"))
 		if err != nil {
-			utils.Log("SearchThread", "Unable to write response", err)
+			utils.Log("SearchThreads", "Unable to write response", err)
 			return
 		}
 		return
@@ -101,11 +101,11 @@ func SearchThread(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		utils.Log("SearchThread", "Unable to get threads", err)
+		utils.Log("SearchThreads", "Unable to get threads", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
-			utils.Log("SearchThread", "Unable to write response", err)
+			utils.Log("SearchThreads", "Unable to write response", err)
 			return
 		}
 		return
@@ -117,11 +117,11 @@ func SearchThread(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		utils.Log("SearchThread", "Unable to get threads count", err)
+		utils.Log("SearchThreads", "Unable to get threads count", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
-			utils.Log("SearchThread", "Unable to write response", err)
+			utils.Log("SearchThreads", "Unable to write response", err)
 			return
 		}
 		return
@@ -131,17 +131,17 @@ func SearchThread(w http.ResponseWriter, r *http.Request) {
 	jsonErr := json.NewEncoder(w).Encode(SearchThreadResponse{int(totalThreads), threads})
 
 	if jsonErr != nil {
-		utils.Log("SearchThread", "Unable to encode threads as JSON", err)
+		utils.Log("SearchThreads", "Unable to encode threads as JSON", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
-			utils.Log("SearchThread", "Unable to write response", err)
+			utils.Log("SearchThreads", "Unable to write response", err)
 			return
 		}
 		return
 	}
 
-	utils.Log("SearchThread", "Threads retrieved for query: "+queryString, nil)
+	utils.Log("SearchThreads", "Threads retrieved for query: "+queryString, nil)
 
 	return
 }

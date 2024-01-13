@@ -26,7 +26,7 @@ func SetupRouter() *mux.Router {
 	http.HandleFunc(BASE_PATH+"user/login", user.LoginUser)
 
 	// Comments
-	r.HandleFunc(BASE_PATH+"thread/{thread_id}/comments", comments.GetComment).Methods("GET")
+	r.HandleFunc(BASE_PATH+"thread/{thread_id}/comments", comments.GetComments).Methods("GET")
 	http.HandleFunc(BASE_PATH+"comment/create", comments.CreateComment)
 	r.HandleFunc(BASE_PATH+"comment/{id}", comments.UpdateComment).Methods("PUT")
 	r.HandleFunc(BASE_PATH+"comment/{id}", comments.DeleteComment).Methods("DELETE")
@@ -39,7 +39,7 @@ func SetupRouter() *mux.Router {
 	r.HandleFunc(BASE_PATH+"thread/{id}", threads.DeleteThread).Methods("DELETE")
 
 	// Search Threads
-	http.HandleFunc(BASE_PATH+"thread", threads.SearchThread)
+	http.HandleFunc(BASE_PATH+"thread", threads.SearchThreads)
 
 	return r
 }

@@ -17,7 +17,7 @@ type GetCommentResponse struct {
 	Count    int32              `json:"count"`
 }
 
-// GetComment godoc
+// GetComments godoc
 // @Summary Handles comment retrieval requests
 // @Description Retrieves comments for the given thread
 // @Tags comment
@@ -28,13 +28,13 @@ type GetCommentResponse struct {
 // @Failure 405 "Method not allowed"
 // @Failure 500 "Internal server error"
 // @Router /thread/{thread_id}/comments [get]
-func GetComment(w http.ResponseWriter, r *http.Request) {
+func GetComments(w http.ResponseWriter, r *http.Request) {
 	// Only GET
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		_, err := w.Write([]byte("Method not allowed"))
 		if err != nil {
-			utils.Log("GetComment", "Unable to write response", err)
+			utils.Log("GetComments", "Unable to write response", err)
 			return
 		}
 		return
@@ -73,11 +73,11 @@ func GetComment(w http.ResponseWriter, r *http.Request) {
 	var pgThreadId pgtype.UUID
 	err = pgThreadId.Scan(threadId)
 	if err != nil {
-		utils.Log("GetComment", "Unable to scan threadId", err)
+		utils.Log("GetComments", "Unable to scan threadId", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
-			utils.Log("GetComment", "Unable to write response", err)
+			utils.Log("GetComments", "Unable to write response", err)
 			return
 		}
 		return
@@ -92,11 +92,11 @@ func GetComment(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		utils.Log("GetComment", "Unable to get comments", err)
+		utils.Log("GetComments", "Unable to get comments", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
-			utils.Log("GetComment", "Unable to write response", err)
+			utils.Log("GetComments", "Unable to write response", err)
 			return
 		}
 		return
@@ -105,11 +105,11 @@ func GetComment(w http.ResponseWriter, r *http.Request) {
 	commentsCount, err := queries.GetCommentCount(ctx, pgThreadId)
 
 	if err != nil {
-		utils.Log("GetComment", "Unable to get comment count", err)
+		utils.Log("GetComments", "Unable to get comment count", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
-			utils.Log("GetComment", "Unable to write response", err)
+			utils.Log("GetComments", "Unable to write response", err)
 			return
 		}
 		return
@@ -124,17 +124,17 @@ func GetComment(w http.ResponseWriter, r *http.Request) {
 	jsonErr := json.NewEncoder(w).Encode(response)
 
 	if jsonErr != nil {
-		utils.Log("GetComment", "Unable to encode comments as JSON", err)
+		utils.Log("GetComments", "Unable to encode comments as JSON", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
-			utils.Log("GetComment", "Unable to write response", err)
+			utils.Log("GetComments", "Unable to write response", err)
 			return
 		}
 		return
 	}
 
-	utils.Log("GetComment", "Comments retrieved for thread: "+threadId, nil)
+	utils.Log("GetComments", "Comments retrieved for thread: "+threadId, nil)
 
 	return
 }
