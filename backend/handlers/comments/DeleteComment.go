@@ -5,9 +5,9 @@ import (
 	"backend/tutorial"
 	"backend/utils"
 	"context"
+	"errors"
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5/pgtype"
-	"log"
 	"net/http"
 )
 
@@ -16,72 +16,99 @@ import (
 // @Description Deletes a comment
 // @Tags comment
 // @Param id path string true "Comment UUID"
+// @Security ApiKeyAuth
 // @Success 200
 // @Failure 401 "Invalid JWT token"
-// @Failure 403 "User is not the creator of the comment"
-// @Failure 500
+// @Failure 403 "No permission to delete comment"
+// @Failure 405 "Method not allowed"
+// @Failure 500 "Internal server error"
 // @Router /comment/{id} [delete]
 func DeleteComment(w http.ResponseWriter, r *http.Request) {
 	// Only DELETE
 	if r.Method != http.MethodDelete {
+		utils.Log("DeleteComment", "Method not allowed", errors.New("method not allowed"))
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		_, err := w.Write([]byte("Method not allowed"))
+		if err != nil {
+			utils.Log("DeleteComment", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
-	// Get details from request body
+	// Get commentId from request
 	commentId := mux.Vars(r)["id"]
-	utils.Log("deleteComment", "[DEBUG] Comment ID: "+commentId, nil)
 
-	// Get JWT token from request header
-	token := r.Header.Get("Authorization")
+	// Get and verify JWT token from request header
+	token := r.Header.Get("Authorization")[7:]
 
-	// Remove "Bearer " from token
-	token = token[7:]
-
-	log.Println("[DEBUG] Token: ", token)
-
-	// Verify token
 	verifiedUsername, err := utils.VerifyJWT(token)
 
 	if err != nil {
-		log.Println("[ERROR] Unable to verify JWT token: ", err, verifiedUsername)
+		utils.Log("DeleteComment", "Unable to verify JWT token", err)
 		w.WriteHeader(http.StatusUnauthorized)
+		_, err := w.Write([]byte("Invalid JWT token"))
+		if err != nil {
+			utils.Log("DeleteComment", "Unable to write response", err)
+			return
+		}
 		return
 	}
-	username := verifiedUsername
 
 	// Connect to database
 	ctx := context.Background()
 	conn := database.GetConnection()
-	defer conn.Close(ctx)
+	defer database.CloseConnection(conn)
 	queries := tutorial.New(conn)
 
 	// Create comment UUID for pg
-	var commentUUID pgtype.UUID
-
-	commentUUID.Scan(commentId)
+	var pgCommentId pgtype.UUID
+	err = pgCommentId.Scan(commentId)
+	if err != nil {
+		utils.Log("DeleteComment", "Unable to scan commentId", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("DeleteComment", "Unable to write response", err)
+			return
+		}
+		return
+	}
 
 	// Check if the user is the creator of the comment
-	isCreator, err := queries.CheckCommentCreator(ctx, tutorial.CheckCommentCreatorParams{Creator: username,
-		ID: commentUUID})
+	isCreator, err := queries.CheckCommentCreator(ctx, tutorial.CheckCommentCreatorParams{
+		Creator: verifiedUsername,
+		ID:      pgCommentId})
 
 	if err != nil || !isCreator {
-		log.Println("[ERROR] Unable to verify creator: ", err, isCreator)
+		utils.Log("DeleteComment", "User is not the creator of the comment", err)
 		w.WriteHeader(http.StatusForbidden)
+		_, err := w.Write([]byte("No permission to delete comment"))
+		if err != nil {
+			utils.Log("DeleteComment", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
 	// Delete the comment
 	err = queries.DeleteComment(ctx, tutorial.DeleteCommentParams{
-		ID:      commentUUID,
-		Creator: username,
+		ID:      pgCommentId,
+		Creator: verifiedUsername,
 	})
 
 	if err != nil {
-		log.Println("[ERROR] Unable to delete comment: ", err)
+		utils.Log("DeleteComment", "Unable to delete comment", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("DeleteComment", "Unable to write response", err)
+			return
+		}
 		return
 	}
+
+	utils.Log("DeleteComment", "Comment "+commentId+" deleted by "+verifiedUsername, nil)
 
 	return
 }

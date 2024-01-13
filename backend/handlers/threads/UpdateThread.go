@@ -6,162 +6,256 @@ import (
 	"backend/utils"
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/gorilla/mux"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"log"
 	"net/http"
 )
 
-// UpdateThread Handler for /api/v1/updateThread
-func UpdateThread(w http.ResponseWriter, r *http.Request) {
-	// Only POST
-	if r.Method != http.MethodPut {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
+type ThreadUpdateRequestJson struct {
+	Title string   `json:"title"`
+	Body  string   `json:"body"`
+	Tags  []string `json:"tags"`
+}
 
-	type ThreadUpdate struct {
-		Title string   `json:"title"`
-		Body  string   `json:"body"`
-		Tags  []string `json:"tags"`
+// UpdateThread godoc
+// @Summary Handles thread update requests
+// @Description Updates a thread
+// @Tags thread
+// @Param id path string true "Thread UUID"
+// @Param data body ThreadUpdateRequestJson true "Thread data"
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200
+// @Failure 400 "Invalid data"
+// @Failure 401 "Invalid JWT token"
+// @Failure 403 "No permission to update thread"
+// @Failure 405 "Method not allowed"
+// @Failure 500 "Internal server error"
+// @Router /thread/{id} [put]
+func UpdateThread(w http.ResponseWriter, r *http.Request) {
+	// Only PUT
+	if r.Method != http.MethodPut {
+		utils.Log("UpdateThread", "Method not allowed", errors.New("method not allowed"))
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		_, err := w.Write([]byte("Method not allowed"))
+		if err != nil {
+			utils.Log("UpdateThread", "Unable to write response", err)
+			return
+		}
+		return
 	}
 
 	// Get details from request
 	vars := mux.Vars(r)
 	threadId := vars["id"]
-
-	var threadUpdate ThreadUpdate
-	err := json.NewDecoder(r.Body).Decode(&threadUpdate)
+	var updatedThread ThreadUpdateRequestJson
+	err := json.NewDecoder(r.Body).Decode(&updatedThread)
 
 	if err != nil {
-		log.Println("[ERROR] Unable to decode JSON: ", err)
+		utils.Log("UpdateThread", "Unable to decode JSON", err)
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Malformed JSON"))
+		_, err := w.Write([]byte("Invalid data"))
+		if err != nil {
+			utils.Log("UpdateThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
-	title := threadUpdate.Title
-	body := threadUpdate.Body
-	tags := threadUpdate.Tags
+	title := updatedThread.Title
+	body := updatedThread.Body
+	tags := updatedThread.Tags
 
+	// Check if tags are valid
 	if len(tags) > 3 {
-		log.Println("[ERROR] Too many tags")
+		utils.Log("UpdateThread", "Too many tags", errors.New("too many tags"))
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
-		w.Write([]byte("Input too large"))
+		_, err := w.Write([]byte("Input too large"))
+		if err != nil {
+			utils.Log("UpdateThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
 	if title == "" || body == "" {
-		log.Println("[ERROR] Title or body is empty")
+		utils.Log("UpdateThread", "Title or body is empty", errors.New("title or body is empty"))
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Title or body is empty"))
+		_, err := w.Write([]byte("Invalid data"))
+		if err != nil {
+			utils.Log("UpdateThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
-	//username := r.FormValue("username")
-	//threadId := r.FormValue("id")
-	//title := r.FormValue("title")
-	//body := r.FormValue("body")
-
-	// Get JWT token from request header
-	token := r.Header.Get("Authorization")
-
-	// Remove "Bearer " from token
-	token = token[7:]
-
-	log.Println("[DEBUG] Token: ", token)
-
-	// Verify token
+	// Get and verify JWT token from request header
+	token := r.Header.Get("Authorization")[7:]
 	verifiedUsername, err := utils.VerifyJWT(token)
 
 	if err != nil {
-		log.Println("[ERROR] Unable to verify JWT token: ", err, verifiedUsername)
+		utils.Log("UpdateThread", "Unable to verify JWT token", err)
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("Unauthorized"))
+		_, err := w.Write([]byte("Invalid JWT token"))
+		if err != nil {
+			utils.Log("UpdateThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
 	// Connect to database
 	ctx := context.Background()
 	conn := database.GetConnection()
-	defer conn.Close(ctx)
+	defer database.CloseConnection(conn)
 	queries := tutorial.New(conn)
 
+	// Begin a new transaction
 	tx, err := conn.Begin(ctx)
+
 	if err != nil {
-		log.Println("[ERROR] Unable to begin transaction: ", err)
+		utils.Log("UpdateThread", "Unable to begin transaction", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("UpdateThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
-	defer tx.Rollback(ctx)
+
+	var hasCommitted = false
+
+	defer func(tx pgx.Tx, ctx context.Context) {
+		if hasCommitted {
+			return
+		}
+		err := tx.Rollback(ctx)
+		if err != nil {
+			utils.Log("UpdateThread", "Unable to rollback transaction", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			_, err := w.Write([]byte("Internal server error"))
+			if err != nil {
+				utils.Log("UpdateThread", "Unable to write response", err)
+				return
+			}
+			return
+		}
+	}(tx, ctx)
+
 	qtx := queries.WithTx(tx)
 
 	// Create thread UUID for pg
-	var threadUUID pgtype.UUID
+	var pgThreadId pgtype.UUID
 
-	threadUUID.Scan(threadId)
+	err = pgThreadId.Scan(threadId)
+	if err != nil {
+		utils.Log("UpdateThread", "Unable to scan threadId", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("UpdateThread", "Unable to write response", err)
+			return
+		}
+		return
+	}
 
 	// Check if user is creator of thread
-	isThreadCreator, err := qtx.CheckThreadCreator(ctx, tutorial.CheckThreadCreatorParams{Creator: verifiedUsername,
-		ID: threadUUID})
-
+	isThreadCreator, err := qtx.CheckThreadCreator(ctx, tutorial.CheckThreadCreatorParams{
+		Creator: verifiedUsername,
+		ID:      pgThreadId})
 	if err != nil || !isThreadCreator {
-		log.Println("[ERROR] Unable to check if user is creator of thread: ", err)
+		utils.Log("UpdateThread", "Unable to check if user is creator of thread", err)
 		w.WriteHeader(http.StatusForbidden)
-		w.Write([]byte("Forbidden"))
+		_, err := w.Write([]byte("No permission to update thread"))
+		if err != nil {
+			utils.Log("UpdateThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
 	// Update the thread
-	err = qtx.UpdateThread(ctx, tutorial.UpdateThreadParams{ID: threadUUID, Title: title, Body: body,
+	err = qtx.UpdateThread(ctx, tutorial.UpdateThreadParams{
+		ID:      pgThreadId,
+		Title:   title,
+		Body:    body,
 		Creator: verifiedUsername})
+	if err != nil {
+		utils.Log("UpdateThread", "Unable to update thread", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("UpdateThread", "Unable to write response", err)
+			return
+		}
+	}
 
 	// Update the tags
-	err = qtx.DeleteThreadTags(ctx, threadUUID)
-
+	err = qtx.DeleteThreadTags(ctx, pgThreadId)
 	if err != nil {
-		log.Println("[ERROR] Unable to delete thread tags: ", err)
+		utils.Log("UpdateThread", "Unable to delete thread tags", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
-		return
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("UpdateThread", "Unable to write response", err)
+			return
+		}
 	}
 
 	err = qtx.DeleteUnusedTags(ctx)
-
 	if err != nil {
-		log.Println("[ERROR] Unable to delete unused tags: ", err)
+		utils.Log("UpdateThread", "Unable to delete unused tags", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
-		return
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("UpdateThread", "Unable to write response", err)
+			return
+		}
 	}
 
 	err = qtx.AddNewTags(ctx, tags)
-
 	if err != nil {
-		log.Println("[ERROR] Unable to add new tags: ", err)
+		utils.Log("UpdateThread", "Unable to add new tags", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
-		return
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("UpdateThread", "Unable to write response", err)
+			return
+		}
 	}
 
-	err = qtx.AddThreadTags(ctx, tutorial.AddThreadTagsParams{ThreadID: threadUUID, Tagarray: tags})
-
+	err = qtx.AddThreadTags(ctx, tutorial.AddThreadTagsParams{
+		ThreadID: pgThreadId,
+		Tagarray: tags})
 	if err != nil {
-		log.Println("[ERROR] Unable to add thread tags: ", err)
+		utils.Log("UpdateThread", "Unable to add thread tags", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
-		return
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("UpdateThread", "Unable to write response", err)
+			return
+		}
 	}
 
 	err = tx.Commit(ctx)
-
 	if err != nil {
-		log.Println("[ERROR] Unable to commit transaction: ", err)
+		utils.Log("UpdateThread", "Unable to commit transaction", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("UpdateThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
+
+	hasCommitted = true
+
+	utils.Log("UpdateThread", "Thread "+threadId+" updated", nil)
 
 	return
 }

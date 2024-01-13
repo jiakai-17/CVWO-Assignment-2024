@@ -3,38 +3,49 @@ package comments
 import (
 	"backend/database"
 	"backend/tutorial"
+	"backend/utils"
 	"context"
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5/pgtype"
-	"log"
 	"net/http"
 	"slices"
 	"strconv"
 )
+
+type GetCommentResponse struct {
+	Comments []tutorial.Comment `json:"comments"`
+	Count    int32              `json:"count"`
+}
 
 // GetComment godoc
 // @Summary Handles comment retrieval requests
 // @Description Retrieves comments for the given thread
 // @Tags comment
 // @Param thread_id path string true "Thread UUID"
-// @Param order query string false "Sorting order" Enums(created_time_asc, created_time_desc)
-// @Param page query string false "Page number"
-// @Success 200 "JSON array of comments"
-// @Failure 500
+// @Param order query string false "Sorting order, default 'created_time_asc'" Enums(created_time_asc, created_time_desc)
+// @Param p query string false "Page number, default '1'"
+// @Success 200 {object} GetCommentResponse
+// @Failure 405 "Method not allowed"
+// @Failure 500 "Internal server error"
 // @Router /thread/{thread_id}/comments [get]
 func GetComment(w http.ResponseWriter, r *http.Request) {
 	// Only GET
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		_, err := w.Write([]byte("Method not allowed"))
+		if err != nil {
+			utils.Log("GetComment", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
-	// How many comments per page
-	size := 10
+	// Number of comments per page
+	pageSize := 10
 
 	// Get details from request body
-	id := mux.Vars(r)["thread_id"]
+	threadId := mux.Vars(r)["thread_id"]
 	order := r.FormValue("order")
 	page := r.FormValue("p")
 
@@ -51,58 +62,80 @@ func GetComment(w http.ResponseWriter, r *http.Request) {
 	pageNumber, err := strconv.Atoi(page)
 	offset := 0
 	if err == nil && pageNumber > 1 {
-		offset = (pageNumber - 1) * size
+		offset = (pageNumber - 1) * pageSize
 	}
 
 	// Connect to database
 	ctx := context.Background()
 	conn := database.GetConnection()
-	defer conn.Close(ctx)
+	defer database.CloseConnection(conn)
 	queries := tutorial.New(conn)
 
-	var threadUUID pgtype.UUID
-	threadUUID.Scan(id)
+	var pgThreadId pgtype.UUID
+	err = pgThreadId.Scan(threadId)
+	if err != nil {
+		utils.Log("GetComment", "Unable to scan threadId", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("GetComment", "Unable to write response", err)
+			return
+		}
+		return
+	}
 
 	// Get the comments
 	comments, err := queries.GetComments(ctx, tutorial.GetCommentsParams{
-		ThreadID:  threadUUID,
+		ThreadID:  pgThreadId,
 		Sortorder: order,
 		Offset:    int32(offset),
-		Limit:     int32(size),
+		Limit:     int32(pageSize),
 	})
 
 	if err != nil {
-		log.Println("[ERROR] Unable to get comments of thread: ", err)
+		utils.Log("GetComment", "Unable to get comments", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("GetComment", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
-	commentsCount, err := queries.GetCommentCount(ctx, threadUUID)
+	commentsCount, err := queries.GetCommentCount(ctx, pgThreadId)
 
 	if err != nil {
-		log.Println("[ERROR] Unable to get comments of thread: ", err)
+		utils.Log("GetComment", "Unable to get comment count", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("GetComment", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
-	type response struct {
-		Comments []tutorial.Comment `json:"comments"`
-		Count    int32              `json:"count"`
-	}
-
-	var resp response
-	resp.Comments = comments
-	resp.Count = int32(commentsCount)
+	var response GetCommentResponse
+	response.Comments = comments
+	response.Count = int32(commentsCount)
 
 	// Return comments as JSON object
 	w.Header().Set("Content-Type", "application/json")
-	jsonErr := json.NewEncoder(w).Encode(resp)
+	jsonErr := json.NewEncoder(w).Encode(response)
 
 	if jsonErr != nil {
-		log.Println("[ERROR] Unable to encode comments as JSON: ", err)
+		utils.Log("GetComment", "Unable to encode comments as JSON", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("GetComment", "Unable to write response", err)
+			return
+		}
 		return
 	}
+
+	utils.Log("GetComment", "Comments retrieved for thread: "+threadId, nil)
 
 	return
 }

@@ -1,4 +1,4 @@
-FROM golang:alpine3.19 as builder
+FROM golang:alpine3.19 AS builder
 
 # Set the working directory to /app
 WORKDIR /app

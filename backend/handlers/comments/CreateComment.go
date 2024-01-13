@@ -6,10 +6,15 @@ import (
 	"backend/utils"
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/jackc/pgx/v5/pgtype"
-	"log"
 	"net/http"
 )
+
+type CreateCommentRequestJson struct {
+	ThreadId string `json:"thread_id"`
+	Body     string `json:"body"`
+}
 
 // CreateComment godoc
 // @Summary Handles comment creation requests
@@ -17,80 +22,99 @@ import (
 // @Tags comment
 // @Accept json
 // @Produce json
-// @Param username formData string true "Username"
-// @Param thread formData string true "Thread UUID"
-// @Param body formData string true "Comment body"
-// @Success 200 "JSON of Created comment"
+// @Param data body CreateCommentRequestJson true "Comment data"
+// @Security ApiKeyAuth
+// @Success 200 {object} tutorial.Comment
+// @Failure 400 "Invalid data"
 // @Failure 401 "Invalid JWT token"
-// @Failure 500
+// @Failure 405 "Method not allowed"
+// @Failure 500 "Internal server error"
 // @Router /comment/create [post]
 func CreateComment(w http.ResponseWriter, r *http.Request) {
 	// Only POST
 	if r.Method != http.MethodPost {
+		utils.Log("CreateComment", "Method not allowed", errors.New("method not allowed"))
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		_, err := w.Write([]byte("Method not allowed"))
+		if err != nil {
+			utils.Log("CreateComment", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
-	type CommentCreate struct {
-		ThreadId string `json:"thread_id"`
-		Body     string `json:"body"`
-	}
+	// Get thread ID and comment body from request
+	var createCommentRequest CreateCommentRequestJson
 
-	var commentCreate CommentCreate
-
-	err := json.NewDecoder(r.Body).Decode(&commentCreate)
+	err := json.NewDecoder(r.Body).Decode(&createCommentRequest)
 
 	if err != nil {
-		log.Println("[ERROR] Unable to decode JSON: ", err)
+		utils.Log("CreateComment", "Unable to decode JSON", err)
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Malformed JSON"))
+		_, err := w.Write([]byte("Invalid data"))
+		if err != nil {
+			utils.Log("CreateComment", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
-	thread := commentCreate.ThreadId
-	body := commentCreate.Body
+	threadId := createCommentRequest.ThreadId
+	body := createCommentRequest.Body
 
-	// Get JWT token from request header
-	token := r.Header.Get("Authorization")
+	// Get and verify JWT token from request header
+	token := r.Header.Get("Authorization")[7:]
 
-	// Remove "Bearer " from token
-	token = token[7:]
-
-	log.Println("[DEBUG] Token: ", token)
-
-	// Verify token
 	verifiedUsername, err := utils.VerifyJWT(token)
 
 	if err != nil {
-		log.Println("[ERROR] Unable to verify JWT token: ", err, verifiedUsername)
+		utils.Log("CreateComment", "Unable to verify JWT token", err)
 		w.WriteHeader(http.StatusUnauthorized)
+		_, err := w.Write([]byte("Invalid JWT token"))
+		if err != nil {
+			utils.Log("CreateComment", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
 	// Connect to database
 	ctx := context.Background()
 	conn := database.GetConnection()
-	defer conn.Close(ctx)
+	defer database.CloseConnection(conn)
 	queries := tutorial.New(conn)
 
-	// Create thread UUID for pg
-	var threadID pgtype.UUID
-
-	threadID.Scan(thread)
+	// Format threadId as pgtype.UUID for query
+	var pgThreadId pgtype.UUID
+	err = pgThreadId.Scan(threadId)
+	if err != nil {
+		utils.Log("CreateComment", "Unable to scan threadId", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("CreateComment", "Unable to write response", err)
+			return
+		}
+		return
+	}
 
 	// Create the comment
 	params := tutorial.CreateCommentParams{
 		Body:     body,
 		Creator:  verifiedUsername,
-		ThreadID: threadID,
+		ThreadID: pgThreadId,
 	}
 
 	comment, err := queries.CreateComment(ctx, params)
 
 	if err != nil {
-		log.Println("[ERROR] Unable to create comment: ", err)
+		utils.Log("CreateComment", "Unable to create comment", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		return
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("CreateComment", "Unable to write response", err)
+			return
+		}
 	}
 
 	// Return comment as JSON object
@@ -98,10 +122,16 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 	jsonErr := json.NewEncoder(w).Encode(comment)
 
 	if jsonErr != nil {
-		log.Println("[ERROR] Unable to encode comment as JSON: ", err)
+		utils.Log("CreateComment", "Unable to encode comment as JSON", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		return
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("CreateComment", "Unable to write response", err)
+			return
+		}
 	}
+
+	utils.Log("CreateComment", "Comment created on thread: "+threadId+"by: "+verifiedUsername, nil)
 
 	return
 }

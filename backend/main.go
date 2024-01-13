@@ -1,7 +1,6 @@
 package main
 
 import (
-	"backend/debug"
 	"backend/handlers/comments"
 	"backend/handlers/threads"
 	"backend/handlers/user"
@@ -9,12 +8,10 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+	"os"
 )
 
 var BASE_PATH = "/api/v1/"
-
-// TODO: Remove this in prod, extract to env variable
-var IS_DEBUG = true
 
 // @title           CVWO Forum Backend API
 // @version         1.0
@@ -33,13 +30,24 @@ func main() {
 
 	r := mux.NewRouter()
 
-	// Routes
-	// Authentication (debug)
-	if IS_DEBUG {
-		http.HandleFunc("/api/v1/getToken", debug.GetToken)
-		http.HandleFunc("/api/v1/verifyToken", debug.VerifyToken)
+	//// Authentication (debug)
+	//if IS_DEBUG {
+	//	http.HandleFunc("/api/v1/getToken", debug.GetToken)
+	//	http.HandleFunc("/api/v1/verifyToken", debug.VerifyToken)
+	//}
+
+	// Get env variables
+	if os.Getenv("BASE_PATH") != "" {
+		BASE_PATH = os.Getenv("BASE_PATH")
 	}
 
+	var secretString = os.Getenv("JWT_SECRETSTRING")
+	if secretString == "" {
+		utils.Log("main", "No JWT secret string provided, using 'secretstring'", nil)
+		secretString = "secretstring"
+	}
+
+	// Routes
 	// Authentication
 	http.HandleFunc(BASE_PATH+"user/create", user.CreateUser)
 	http.HandleFunc(BASE_PATH+"user/login", user.LoginUser)
@@ -62,6 +70,9 @@ func main() {
 
 	// Start server
 	http.Handle("/", r)
+
+	utils.InitSecret(secretString)
+
 	utils.Log("main", "Listening on port 9090...", nil)
 	log.Fatal(http.ListenAndServe(":9090", nil))
 }

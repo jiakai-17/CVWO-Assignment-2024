@@ -3,14 +3,15 @@ package utils
 import (
 	"errors"
 	"github.com/golang-jwt/jwt/v5"
-	"log"
 	"time"
 )
 
-// SECRETSTRING TODO: Environment variable
-var SECRETSTRING = "cvwo-e8e2bda6-a005-41e2-8be7-2bae12888bba"
+var SECRET []byte = nil
 
-var SECRET = []byte(SECRETSTRING)
+// InitSecret Initializes the secret used to sign JWT tokens. Must be called before any JWT operations.
+func InitSecret(secretstring string) {
+	SECRET = []byte(secretstring)
+}
 
 // CreateJWT Creates a new JWT token with the username as the payload. Valid for 24 hours.
 func CreateJWT(username string) (string, error) {
@@ -24,7 +25,7 @@ func CreateJWT(username string) (string, error) {
 	signedToken, err := tokenWithClaims.SignedString(SECRET)
 
 	if err != nil {
-		log.Println("[ERROR] Error signing token: ", err)
+		Log("jwt", "Unable to sign token", err)
 		return "", err
 	}
 	return signedToken, nil
@@ -36,14 +37,15 @@ func VerifyJWT(tokenString string) (string, error) {
 		// Check signing method
 		_, ok := token.Method.(*jwt.SigningMethodHMAC)
 		if !ok {
-			log.Println("[ERROR] Unexpected signing method: ", token.Header["alg"])
+			Log("jwt", "Unexpected signing method",
+				errors.New("got: "+token.Header["alg"].(string)+", expected: HS256"))
 			return nil, errors.New("unexpected signing method")
 		}
 		return SECRET, nil
 	})
 
 	if err != nil {
-		log.Println("[ERROR] Error parsing token: ", err)
+		Log("jwt", "Error parsing token", err)
 		return "", err
 	}
 

@@ -6,34 +6,57 @@ import (
 	"backend/utils"
 	"context"
 	"encoding/json"
-	"log"
+	"errors"
+	"fmt"
+	"github.com/jackc/pgx/v5"
 	"net/http"
 )
 
-// CreateThread Handler for /api/v1/createThread
+type CreateThreadRequestJson struct {
+	Title string   `json:"title"`
+	Body  string   `json:"body"`
+	Tags  []string `json:"tags"`
+}
+
+// CreateThread godoc
+// @Summary Handles thread creation requests
+// @Description Creates a new thread
+// @Tags thread
+// @Accept json
+// @Produce json
+// @Param data body CreateThreadRequestJson true "Thread data"
+// @Security ApiKeyAuth
+// @Success 200 {object} tutorial.GetThreadDetailsRow
+// @Failure 400 "Invalid data"
+// @Failure 401 "Invalid JWT token"
+// @Failure 405 "Method not allowed"
+// @Failure 413 "Input too large"
+// @Failure 500 "Internal server error"
+// @Router /thread/create [post]
 func CreateThread(w http.ResponseWriter, r *http.Request) {
 	// Only POST
 	if r.Method != http.MethodPost {
+		utils.Log("CreateThread", "Method not allowed", errors.New("method not allowed"))
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		w.Write([]byte("Method not allowed"))
+		_, err := w.Write([]byte("Method not allowed"))
+		if err != nil {
+			utils.Log("CreateThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
-	type ThreadCreate struct {
-		Title string   `json:"title"`
-		Body  string   `json:"body"`
-		Tags  []string `json:"tags"`
-	}
-
-	// Get details from request body
-	var threadCreate ThreadCreate
-
+	// Get details from request
+	var threadCreate CreateThreadRequestJson
 	err := json.NewDecoder(r.Body).Decode(&threadCreate)
-
 	if err != nil {
-		log.Println("[ERROR] Unable to decode JSON: ", err)
+		utils.Log("CreateThread", "Unable to decode JSON", err)
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Malformed JSON"))
+		_, err := w.Write([]byte("Malformed JSON"))
+		if err != nil {
+			utils.Log("CreateThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
@@ -41,106 +64,181 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 	body := threadCreate.Body
 
 	if len(threadCreate.Tags) > 3 {
-		log.Println("[ERROR] Too many tags")
+		utils.Log("CreateThread", "Too many tags", errors.New("too many tags"))
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
-		w.Write([]byte("Input too large"))
+		_, err := w.Write([]byte("Input too large"))
+		if err != nil {
+			utils.Log("CreateThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
 	if title == "" || body == "" {
-		log.Println("[ERROR] Title or body is empty")
+		utils.Log("CreateThread", "Title or body is empty",
+			errors.New("title or body is empty"))
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Title or body is empty"))
+		_, err := w.Write([]byte("Invalid data"))
+		if err != nil {
+			utils.Log("CreateThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
-	// Get JWT token from request header
-	token := r.Header.Get("Authorization")
-
-	// Remove "Bearer " from token
-	token = token[7:]
-
-	log.Println("[DEBUG] Token: ", token)
-
-	// Verify token
+	// Get and verify JWT token from request header
+	token := r.Header.Get("Authorization")[7:]
 	verifiedUsername, err := utils.VerifyJWT(token)
 
 	if err != nil {
-		log.Println("[ERROR] Unable to verify JWT token: ", err, verifiedUsername)
+		utils.Log("CreateThread", "Unable to verify JWT token", err)
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("Unauthorized"))
+		_, err := w.Write([]byte("Invalid JWT token"))
+		if err != nil {
+			utils.Log("CreateThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
 	// Connect to database
 	ctx := context.Background()
 	conn := database.GetConnection()
-	defer conn.Close(ctx)
+	defer database.CloseConnection(conn)
 	queries := tutorial.New(conn)
 
-	// Create the thread
+	// Begin a new transaction
 	tx, err := conn.Begin(ctx)
 	if err != nil {
-		log.Println("[ERROR] Unable to begin transaction: ", err)
+		utils.Log("CreateThread", "Unable to begin transaction", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("CreateThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
-	defer tx.Rollback(ctx)
-	qtx := queries.WithTx(tx)
-	thread, err := qtx.CreateThread(ctx, tutorial.CreateThreadParams{Creator: verifiedUsername, Title: title, Body: body})
 
-	//thread, err := queries.CreateThread(ctx, tutorial.CreateThreadParams{Creator: verifiedUsername, Title: title, Body: body})
+	var hasCommitted = false
+
+	defer func(tx pgx.Tx, ctx context.Context) {
+		if hasCommitted {
+			return
+		}
+		err := tx.Rollback(ctx)
+		if err != nil {
+			utils.Log("CreateThread", "Unable to rollback transaction", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			_, err := w.Write([]byte("Internal server error"))
+			if err != nil {
+				utils.Log("CreateThread", "Unable to write response", err)
+				return
+			}
+		}
+	}(tx, ctx)
+
+	qtx := queries.WithTx(tx)
+
+	// Create the thread
+	thread, err := qtx.CreateThread(ctx, tutorial.CreateThreadParams{
+		Creator: verifiedUsername,
+		Title:   title,
+		Body:    body})
 
 	if err != nil {
-		log.Println("[ERROR] Unable to create thread: ", err)
+		utils.Log("CreateThread", "Unable to create thread", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("CreateThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
-	var threadId = thread.ID
+	var pgThreadId = thread.ID
 
-	// Create tags
+	// Create tags for the thread
 	err = qtx.AddNewTags(ctx, threadCreate.Tags)
 	if err != nil {
-		log.Println("[ERROR] Unable to create tags: ", err)
+		utils.Log("CreateThread", "Unable to create tags", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("CreateThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
-	// Add tags to thread
-	err = qtx.AddThreadTags(ctx, tutorial.AddThreadTagsParams{ThreadID: threadId, Tagarray: threadCreate.Tags})
+	err = qtx.AddThreadTags(ctx, tutorial.AddThreadTagsParams{
+		ThreadID: pgThreadId,
+		Tagarray: threadCreate.Tags})
 
 	if err != nil {
-		log.Println("[ERROR] Unable to add tags to thread: ", err)
+		utils.Log("CreateThread", "Unable to add tags to thread", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("CreateThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
 	err = tx.Commit(ctx)
 
 	if err != nil {
-		log.Println("[ERROR] Unable to commit transaction: ", err)
+		utils.Log("CreateThread", "Unable to commit transaction", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("CreateThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
-	updatedThread, _ := queries.GetThreadDetails(ctx, threadId)
+	hasCommitted = true
+
+	createdThread, err := queries.GetThreadDetails(ctx, pgThreadId)
+
+	if err != nil {
+		utils.Log("CreateThread", "Unable to get thread details", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("CreateThread", "Unable to write response", err)
+			return
+		}
+		return
+	}
 
 	// Return thread as JSON object
 	w.Header().Set("Content-Type", "application/json")
-	jsonErr := json.NewEncoder(w).Encode(updatedThread)
+	jsonErr := json.NewEncoder(w).Encode(createdThread)
 
 	if jsonErr != nil {
-		log.Println("[ERROR] Unable to encode thread as JSON: ", err)
+		utils.Log("CreateThread", "Unable to encode thread as JSON", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("CreateThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
+
+	// Adapted from https://stackoverflow.com/a/71134336
+	var threadId = fmt.Sprintf("%x-%x-%x-%x-%x",
+		pgThreadId.Bytes[0:4],
+		pgThreadId.Bytes[4:6],
+		pgThreadId.Bytes[6:8],
+		pgThreadId.Bytes[8:10],
+		pgThreadId.Bytes[10:16])
+
+	utils.Log("CreateThread", "Thread: "+threadId+" created by: "+verifiedUsername, nil)
 
 	return
 }

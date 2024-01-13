@@ -5,80 +5,114 @@ import (
 	"backend/tutorial"
 	"backend/utils"
 	"context"
+	"errors"
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5/pgtype"
-	"log"
 	"net/http"
 )
 
-// DeleteThread Handler for /api/v1/deleteThread
+// DeleteThread godoc
+// @Summary Handles thread deletion requests
+// @Description Deletes the thread with the given ID
+// @Tags thread
+// @Accept json
+// @Produce json
+// @Param id path string true "Thread ID"
+// @Security ApiKeyAuth
+// @Success 200
+// @Failure 401 "Invalid JWT token"
+// @Failure 403 "No permission to delete thread"
+// @Failure 405 "Method not allowed"
+// @Failure 500 "Internal server error"
+// @Router /thread/{id} [delete]
 func DeleteThread(w http.ResponseWriter, r *http.Request) {
 	// Only DELETE
 	if r.Method != http.MethodDelete {
+		utils.Log("DeleteThread", "Method not allowed", errors.New("method not allowed"))
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		w.Write([]byte("Method not allowed"))
+		_, err := w.Write([]byte("Method not allowed"))
+		if err != nil {
+			utils.Log("DeleteThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
-	// Get details from request body
+	// Get details from request
 	vars := mux.Vars(r)
 	threadId := vars["id"]
 
-	//username := r.FormValue("username")
-	//threadId := r.FormValue("id")
-
-	// Get JWT token from request header
-	token := r.Header.Get("Authorization")
-
-	// Remove "Bearer " from token
-	token = token[7:]
-
-	log.Println("[DEBUG] Token: ", token)
-
-	// Verify token
+	// Get and verify JWT token from request header
+	token := r.Header.Get("Authorization")[7:]
 	verifiedUsername, err := utils.VerifyJWT(token)
 
 	if err != nil {
-		log.Println("[ERROR] Unable to verify JWT token: ", err, verifiedUsername)
+		utils.Log("DeleteThread", "Unable to verify JWT token", err)
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("Unauthorized"))
+		_, err := w.Write([]byte("Invalid JWT token"))
+		if err != nil {
+			utils.Log("DeleteThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
 	// Connect to database
 	ctx := context.Background()
 	conn := database.GetConnection()
-	defer conn.Close(ctx)
+	defer database.CloseConnection(conn)
 	queries := tutorial.New(conn)
 
 	// Create thread UUID for pg
-	var threadUUID pgtype.UUID
+	var pgThreadId pgtype.UUID
 
-	threadUUID.Scan(threadId)
+	err = pgThreadId.Scan(threadId)
 
-	// Check if user is creator of thread
-	isThreadCreator, err := queries.CheckThreadCreator(ctx, tutorial.CheckThreadCreatorParams{Creator: verifiedUsername,
-		ID: threadUUID})
-
-	if err != nil || !isThreadCreator {
-		log.Println("[ERROR] Unable to check if user is creator of thread: ", err)
-		w.WriteHeader(http.StatusForbidden)
-		w.Write([]byte("Forbidden"))
+	if err != nil {
+		utils.Log("DeleteThread", "Unable to scan threadId", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("DeleteThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
-	// Update the thread
+	// Check if user is creator of thread
+	isThreadCreator, err := queries.CheckThreadCreator(ctx, tutorial.CheckThreadCreatorParams{
+		Creator: verifiedUsername,
+		ID:      pgThreadId})
+
+	if err != nil || !isThreadCreator {
+		utils.Log("DeleteThread", "Unable to check if user is creator of thread", err)
+		w.WriteHeader(http.StatusForbidden)
+		_, err := w.Write([]byte("No permission to delete thread"))
+		if err != nil {
+			utils.Log("DeleteThread", "Unable to write response", err)
+			return
+		}
+		return
+	}
+
+	// Delete the thread
 	err = queries.DeleteThread(ctx, tutorial.DeleteThreadParams{
-		ID:      threadUUID,
+		ID:      pgThreadId,
 		Creator: verifiedUsername,
 	})
 
 	if err != nil {
-		log.Println("[ERROR] Unable to delete thread: ", err)
+		utils.Log("DeleteThread", "Unable to delete thread", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal server error"))
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("DeleteThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
+
+	utils.Log("DeleteThread", "Thread deleted: "+threadId+" by: "+verifiedUsername, nil)
 
 	return
 }

@@ -3,9 +3,10 @@ package threads
 import (
 	"backend/database"
 	"backend/tutorial"
+	"backend/utils"
 	"context"
 	"encoding/json"
-	"log"
+	"errors"
 	"net/http"
 	"slices"
 	"strconv"
@@ -17,21 +18,41 @@ type Pagination struct {
 	CurrentPage int `json:"current_page"`
 }
 
-// SearchThread Handler for /api/v1/searchThread
+type SearchThreadResponse struct {
+	TotalThreads int                                `json:"total_threads"`
+	Threads      []tutorial.GetThreadsByCriteriaRow `json:"threads"`
+}
+
+// SearchThread godoc
+// @Summary Handles thread search requests
+// @Description Retrieves threads matching the given query
+// @Tags thread
+// @Accept json
+// @Produce json
+// @Param q query string true "Search query"
+// @Param order query string false "Sorting order, default 'created_time_desc'" Enums(created_time_asc, created_time_desc, num_comments_asc, num_comments_desc)
+// @Param p query string false "Page number, default '1'"
+// @Success 200 {object} SearchThreadResponse
+// @Failure 405 "Method not allowed"
+// @Failure 500 "Internal server error"
+// @Router /thread/search [get]
 func SearchThread(w http.ResponseWriter, r *http.Request) {
 	// Only GET
 	if r.Method != http.MethodGet {
+		utils.Log("SearchThread", "Method not allowed", errors.New("method not allowed"))
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		_, err := w.Write([]byte("Method not allowed"))
+		if err != nil {
+			utils.Log("SearchThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
-	// TODO Add pagination object to response
-	// How many threads per page
-	size := 10
-	// Available sorting orders
+	pageSize := 10
 	availableSortOrders := []string{"created_time_asc", "created_time_desc", "num_comments_asc", "num_comments_desc"}
 
-	// Get details from request body
+	// Get details from request
 	params := r.URL.Query()
 	queryString := params.Get("q")
 	page := params.Get("p")
@@ -47,64 +68,81 @@ func SearchThread(w http.ResponseWriter, r *http.Request) {
 	pageNumber, err := strconv.Atoi(page)
 	offset := 0
 	if err == nil && pageNumber > 1 {
-		offset = (pageNumber - 1) * size
+		offset = (pageNumber - 1) * pageSize
 	}
 
 	// Connect to database
 	ctx := context.Background()
 	conn := database.GetConnection()
-	defer conn.Close(ctx)
+	defer database.CloseConnection(conn)
 	queries := tutorial.New(conn)
 
 	keywords := strings.Split(queryString, " ")
 
 	var parsedKeywords []string
-	var tagArray []string
+	var parsedTagArray []string
 
 	for _, keyword := range keywords {
 		if strings.HasPrefix(keyword, "tag:") {
-			tagArray = append(tagArray, keyword[4:])
+			parsedTagArray = append(parsedTagArray, keyword[4:])
 		} else {
 			parsedKeywords = append(parsedKeywords, keyword)
 		}
 	}
 
-	formattedSearchQuery := strings.Join(parsedKeywords, " & ")
+	formattedKeywords := strings.Join(parsedKeywords, " & ")
 
 	// Get threads
-	log.Println("[INFO] Getting threads", order, formattedSearchQuery, tagArray)
 	threads, err := queries.GetThreadsByCriteria(ctx, tutorial.GetThreadsByCriteriaParams{
-		Limit:     int32(size),
+		Limit:     int32(pageSize),
 		Offset:    int32(offset),
 		Sortorder: order,
-		Keywords:  formattedSearchQuery,
-		Tagarray:  tagArray,
+		Keywords:  formattedKeywords,
+		Tagarray:  parsedTagArray,
 	})
-
-	totalThreads, err := queries.GetThreadsByCriteriaCount(ctx, tutorial.GetThreadsByCriteriaCountParams{
-		Keywords: formattedSearchQuery,
-		Tagarray: tagArray,
-	})
-
-	type response struct {
-		TotalThreads int                                `json:"total_threads"`
-		Threads      []tutorial.GetThreadsByCriteriaRow `json:"threads"`
-	}
 
 	if err != nil {
-		log.Println("[ERROR] Unable to get threads: ", err)
+		utils.Log("SearchThread", "Unable to get threads", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("SearchThread", "Unable to write response", err)
+			return
+		}
+		return
+	}
+
+	totalThreads, err := queries.GetThreadsByCriteriaCount(ctx, tutorial.GetThreadsByCriteriaCountParams{
+		Keywords: formattedKeywords,
+		Tagarray: parsedTagArray,
+	})
+
+	if err != nil {
+		utils.Log("SearchThread", "Unable to get threads count", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("SearchThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	jsonErr := json.NewEncoder(w).Encode(response{int(totalThreads), threads})
+	jsonErr := json.NewEncoder(w).Encode(SearchThreadResponse{int(totalThreads), threads})
 
 	if jsonErr != nil {
-		log.Println("[ERROR] Unable to encode threads as JSON: ", err)
+		utils.Log("SearchThread", "Unable to encode threads as JSON", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		_, err := w.Write([]byte("Internal server error"))
+		if err != nil {
+			utils.Log("SearchThread", "Unable to write response", err)
+			return
+		}
 		return
 	}
+
+	utils.Log("SearchThread", "Threads retrieved for query: "+queryString, nil)
 
 	return
 }
