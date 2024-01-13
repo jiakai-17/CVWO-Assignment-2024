@@ -20,6 +20,11 @@ const docTemplate = `{
     "paths": {
         "/comment/create": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Creates a new comment for the given thread",
                 "consumes": [
                     "application/json"
@@ -33,42 +38,44 @@ const docTemplate = `{
                 "summary": "Handles comment creation requests",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Username",
-                        "name": "username",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Thread UUID",
-                        "name": "thread",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Comment body",
-                        "name": "body",
-                        "in": "formData",
-                        "required": true
+                        "description": "Comment data",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/comments.CreateCommentRequestJson"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "JSON of Created comment"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/tutorial.Comment"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid data"
                     },
                     "401": {
                         "description": "Invalid JWT token"
                     },
+                    "405": {
+                        "description": "Method not allowed"
+                    },
                     "500": {
-                        "description": "Internal Server Error"
+                        "description": "Internal server error"
                     }
                 }
             }
         },
         "/comment/{id}": {
             "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Updates a comment",
                 "tags": [
                     "comment"
@@ -83,29 +90,42 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "Comment body",
-                        "name": "body",
-                        "in": "formData",
-                        "required": true
+                        "description": "Comment data",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/comments.CommentUpdateRequestJson"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK"
                     },
+                    "400": {
+                        "description": "Invalid data"
+                    },
                     "401": {
                         "description": "Invalid JWT token"
                     },
                     "403": {
-                        "description": "User is not the creator of the comment"
+                        "description": "No permission to update comment"
+                    },
+                    "405": {
+                        "description": "Method not allowed"
                     },
                     "500": {
-                        "description": "Internal Server Error"
+                        "description": "Internal server error"
                     }
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Deletes a comment",
                 "tags": [
                     "comment"
@@ -128,10 +148,264 @@ const docTemplate = `{
                         "description": "Invalid JWT token"
                     },
                     "403": {
-                        "description": "User is not the creator of the comment"
+                        "description": "No permission to delete comment"
+                    },
+                    "405": {
+                        "description": "Method not allowed"
                     },
                     "500": {
-                        "description": "Internal Server Error"
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/thread/create": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Creates a new thread",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "thread"
+                ],
+                "summary": "Handles thread creation requests",
+                "parameters": [
+                    {
+                        "description": "Thread data",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/threads.CreateThreadRequestJson"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/tutorial.GetThreadDetailsRow"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid data"
+                    },
+                    "401": {
+                        "description": "Invalid JWT token"
+                    },
+                    "405": {
+                        "description": "Method not allowed"
+                    },
+                    "413": {
+                        "description": "Input too large"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/thread/search": {
+            "get": {
+                "description": "Retrieves threads matching the given query",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "thread"
+                ],
+                "summary": "Handles thread search requests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "created_time_asc",
+                            "created_time_desc",
+                            "num_comments_asc",
+                            "num_comments_desc"
+                        ],
+                        "type": "string",
+                        "description": "Sorting order, default 'created_time_desc'",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Page number, default '1'",
+                        "name": "p",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/threads.SearchThreadResponse"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/thread/{id}": {
+            "get": {
+                "description": "Retrieves the thread with the given ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "thread"
+                ],
+                "summary": "Handles thread retrieval requests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Thread ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/tutorial.Thread"
+                        }
+                    },
+                    "404": {
+                        "description": "Thread not found"
+                    },
+                    "405": {
+                        "description": "Method not allowed"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Updates a thread",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "thread"
+                ],
+                "summary": "Handles thread update requests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Thread UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Thread data",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/threads.ThreadUpdateRequestJson"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Invalid data"
+                    },
+                    "401": {
+                        "description": "Invalid JWT token"
+                    },
+                    "403": {
+                        "description": "No permission to update thread"
+                    },
+                    "405": {
+                        "description": "Method not allowed"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Deletes the thread with the given ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "thread"
+                ],
+                "summary": "Handles thread deletion requests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Thread ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "Invalid JWT token"
+                    },
+                    "403": {
+                        "description": "No permission to delete thread"
+                    },
+                    "405": {
+                        "description": "Method not allowed"
+                    },
+                    "500": {
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -157,23 +431,29 @@ const docTemplate = `{
                             "created_time_desc"
                         ],
                         "type": "string",
-                        "description": "Sorting order",
+                        "description": "Sorting order, default 'created_time_asc'",
                         "name": "order",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Page number",
-                        "name": "page",
+                        "description": "Page number, default '1'",
+                        "name": "p",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "JSON array of comments"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/comments.GetCommentResponse"
+                        }
+                    },
+                    "405": {
+                        "description": "Method not allowed"
                     },
                     "500": {
-                        "description": "Internal Server Error"
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -193,32 +473,30 @@ const docTemplate = `{
                 "summary": "Handles registration requests",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Username",
-                        "name": "username",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Password",
-                        "name": "password",
-                        "in": "formData",
-                        "required": true
+                        "description": "Username and password",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.AuthRequestJson"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/user.AuthResponseJson"
+                            "$ref": "#/definitions/models.AuthResponseJson"
                         }
                     },
                     "400": {
-                        "description": "Username already exists"
+                        "description": "Incorrect username/password"
+                    },
+                    "405": {
+                        "description": "Method not allowed"
                     },
                     "500": {
-                        "description": "Internal Server Error"
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -238,42 +516,84 @@ const docTemplate = `{
                 "summary": "Handles login requests",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Username",
-                        "name": "username",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Password",
-                        "name": "password",
-                        "in": "formData",
-                        "required": true
+                        "description": "Username and password",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.AuthRequestJson"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/user.AuthResponseJson"
+                            "$ref": "#/definitions/models.AuthResponseJson"
                         }
                     },
                     "400": {
-                        "description": "Username does not exist"
+                        "description": "Invalid data"
                     },
                     "401": {
-                        "description": "Incorrect password"
+                        "description": "Incorrect username/password"
+                    },
+                    "405": {
+                        "description": "Method not allowed"
                     },
                     "500": {
-                        "description": "Internal Server Error"
+                        "description": "Internal server error"
                     }
                 }
             }
         }
     },
     "definitions": {
-        "user.AuthResponseJson": {
+        "comments.CommentUpdateRequestJson": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                }
+            }
+        },
+        "comments.CreateCommentRequestJson": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "thread_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "comments.GetCommentResponse": {
+            "type": "object",
+            "properties": {
+                "comments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tutorial.Comment"
+                    }
+                },
+                "count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.AuthRequestJson": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.AuthResponseJson": {
             "type": "object",
             "properties": {
                 "token": {
@@ -281,6 +601,194 @@ const docTemplate = `{
                 },
                 "username": {
                     "type": "string"
+                }
+            }
+        },
+        "pgtype.InfinityModifier": {
+            "type": "integer",
+            "enum": [
+                1,
+                0,
+                -1
+            ],
+            "x-enum-varnames": [
+                "Infinity",
+                "Finite",
+                "NegativeInfinity"
+            ]
+        },
+        "pgtype.Timestamptz": {
+            "type": "object",
+            "properties": {
+                "infinityModifier": {
+                    "$ref": "#/definitions/pgtype.InfinityModifier"
+                },
+                "time": {
+                    "type": "string"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "threads.CreateThreadRequestJson": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "threads.SearchThreadResponse": {
+            "type": "object",
+            "properties": {
+                "threads": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/tutorial.GetThreadsByCriteriaRow"
+                    }
+                },
+                "total_threads": {
+                    "type": "integer"
+                }
+            }
+        },
+        "threads.ThreadUpdateRequestJson": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "tutorial.Comment": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "created_time": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "creator": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "thread_id": {
+                    "type": "string"
+                },
+                "updated_time": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                }
+            }
+        },
+        "tutorial.GetThreadDetailsRow": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "created_time": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "creator": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "num_comments": {
+                    "type": "integer"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_time": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                }
+            }
+        },
+        "tutorial.GetThreadsByCriteriaRow": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "created_time": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "creator": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "num_comments": {
+                    "type": "integer"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_time": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                }
+            }
+        },
+        "tutorial.Thread": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "created_time": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "creator": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "num_comments": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_time": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
                 }
             }
         }

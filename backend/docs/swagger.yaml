@@ -1,11 +1,163 @@
 basePath: /api/v1
 definitions:
-  user.AuthResponseJson:
+  comments.CommentUpdateRequestJson:
+    properties:
+      body:
+        type: string
+    type: object
+  comments.CreateCommentRequestJson:
+    properties:
+      body:
+        type: string
+      thread_id:
+        type: string
+    type: object
+  comments.GetCommentResponse:
+    properties:
+      comments:
+        items:
+          $ref: '#/definitions/tutorial.Comment'
+        type: array
+      count:
+        type: integer
+    type: object
+  models.AuthRequestJson:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  models.AuthResponseJson:
     properties:
       token:
         type: string
       username:
         type: string
+    type: object
+  pgtype.InfinityModifier:
+    enum:
+    - 1
+    - 0
+    - -1
+    type: integer
+    x-enum-varnames:
+    - Infinity
+    - Finite
+    - NegativeInfinity
+  pgtype.Timestamptz:
+    properties:
+      infinityModifier:
+        $ref: '#/definitions/pgtype.InfinityModifier'
+      time:
+        type: string
+      valid:
+        type: boolean
+    type: object
+  threads.CreateThreadRequestJson:
+    properties:
+      body:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+    type: object
+  threads.SearchThreadResponse:
+    properties:
+      threads:
+        items:
+          $ref: '#/definitions/tutorial.GetThreadsByCriteriaRow'
+        type: array
+      total_threads:
+        type: integer
+    type: object
+  threads.ThreadUpdateRequestJson:
+    properties:
+      body:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+    type: object
+  tutorial.Comment:
+    properties:
+      body:
+        type: string
+      created_time:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      creator:
+        type: string
+      id:
+        type: string
+      thread_id:
+        type: string
+      updated_time:
+        $ref: '#/definitions/pgtype.Timestamptz'
+    type: object
+  tutorial.GetThreadDetailsRow:
+    properties:
+      body:
+        type: string
+      created_time:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      creator:
+        type: string
+      id:
+        type: string
+      num_comments:
+        type: integer
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+      updated_time:
+        $ref: '#/definitions/pgtype.Timestamptz'
+    type: object
+  tutorial.GetThreadsByCriteriaRow:
+    properties:
+      body:
+        type: string
+      created_time:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      creator:
+        type: string
+      id:
+        type: string
+      num_comments:
+        type: integer
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+      updated_time:
+        $ref: '#/definitions/pgtype.Timestamptz'
+    type: object
+  tutorial.Thread:
+    properties:
+      body:
+        type: string
+      created_time:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      creator:
+        type: string
+      id:
+        type: string
+      num_comments:
+        type: integer
+      title:
+        type: string
+      updated_time:
+        $ref: '#/definitions/pgtype.Timestamptz'
     type: object
 host: localhost:9090
 info:
@@ -31,9 +183,13 @@ paths:
         "401":
           description: Invalid JWT token
         "403":
-          description: User is not the creator of the comment
+          description: No permission to delete comment
+        "405":
+          description: Method not allowed
         "500":
-          description: Internal Server Error
+          description: Internal server error
+      security:
+      - ApiKeyAuth: []
       summary: Handles comment deletion requests
       tags:
       - comment
@@ -45,20 +201,27 @@ paths:
         name: id
         required: true
         type: string
-      - description: Comment body
-        in: formData
-        name: body
+      - description: Comment data
+        in: body
+        name: data
         required: true
-        type: string
+        schema:
+          $ref: '#/definitions/comments.CommentUpdateRequestJson'
       responses:
         "200":
           description: OK
+        "400":
+          description: Invalid data
         "401":
           description: Invalid JWT token
         "403":
-          description: User is not the creator of the comment
+          description: No permission to update comment
+        "405":
+          description: Method not allowed
         "500":
-          description: Internal Server Error
+          description: Internal server error
+      security:
+      - ApiKeyAuth: []
       summary: Handles comment update requests
       tags:
       - comment
@@ -68,33 +231,123 @@ paths:
       - application/json
       description: Creates a new comment for the given thread
       parameters:
-      - description: Username
-        in: formData
-        name: username
+      - description: Comment data
+        in: body
+        name: data
         required: true
-        type: string
-      - description: Thread UUID
-        in: formData
-        name: thread
-        required: true
-        type: string
-      - description: Comment body
-        in: formData
-        name: body
+        schema:
+          $ref: '#/definitions/comments.CreateCommentRequestJson'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/tutorial.Comment'
+        "400":
+          description: Invalid data
+        "401":
+          description: Invalid JWT token
+        "405":
+          description: Method not allowed
+        "500":
+          description: Internal server error
+      security:
+      - ApiKeyAuth: []
+      summary: Handles comment creation requests
+      tags:
+      - comment
+  /thread/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes the thread with the given ID
+      parameters:
+      - description: Thread ID
+        in: path
+        name: id
         required: true
         type: string
       produces:
       - application/json
       responses:
         "200":
-          description: JSON of Created comment
+          description: OK
         "401":
           description: Invalid JWT token
+        "403":
+          description: No permission to delete thread
+        "405":
+          description: Method not allowed
         "500":
-          description: Internal Server Error
-      summary: Handles comment creation requests
+          description: Internal server error
+      security:
+      - ApiKeyAuth: []
+      summary: Handles thread deletion requests
       tags:
-      - comment
+      - thread
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the thread with the given ID
+      parameters:
+      - description: Thread ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/tutorial.Thread'
+        "404":
+          description: Thread not found
+        "405":
+          description: Method not allowed
+        "500":
+          description: Internal server error
+      summary: Handles thread retrieval requests
+      tags:
+      - thread
+    put:
+      consumes:
+      - application/json
+      description: Updates a thread
+      parameters:
+      - description: Thread UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Thread data
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/threads.ThreadUpdateRequestJson'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Invalid data
+        "401":
+          description: Invalid JWT token
+        "403":
+          description: No permission to update thread
+        "405":
+          description: Method not allowed
+        "500":
+          description: Internal server error
+      security:
+      - ApiKeyAuth: []
+      summary: Handles thread update requests
+      tags:
+      - thread
   /thread/{thread_id}/comments:
     get:
       description: Retrieves comments for the given thread
@@ -104,40 +357,86 @@ paths:
         name: thread_id
         required: true
         type: string
-      - description: Sorting order
+      - description: Sorting order, default 'created_time_asc'
         enum:
         - created_time_asc
         - created_time_desc
         in: query
         name: order
         type: string
-      - description: Page number
+      - description: Page number, default '1'
         in: query
-        name: page
+        name: p
         type: string
       responses:
         "200":
-          description: JSON array of comments
+          description: OK
+          schema:
+            $ref: '#/definitions/comments.GetCommentResponse'
+        "405":
+          description: Method not allowed
         "500":
-          description: Internal Server Error
+          description: Internal server error
       summary: Handles comment retrieval requests
       tags:
       - comment
-  /user/create:
+  /thread/create:
     post:
       consumes:
       - application/json
-      description: Registers a new user with the given username and password
+      description: Creates a new thread
       parameters:
-      - description: Username
-        in: formData
-        name: username
+      - description: Thread data
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/threads.CreateThreadRequestJson'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/tutorial.GetThreadDetailsRow'
+        "400":
+          description: Invalid data
+        "401":
+          description: Invalid JWT token
+        "405":
+          description: Method not allowed
+        "413":
+          description: Input too large
+        "500":
+          description: Internal server error
+      security:
+      - ApiKeyAuth: []
+      summary: Handles thread creation requests
+      tags:
+      - thread
+  /thread/search:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves threads matching the given query
+      parameters:
+      - description: Search query
+        in: query
+        name: q
         required: true
         type: string
-      - description: Password
-        in: formData
-        name: password
-        required: true
+      - description: Sorting order, default 'created_time_desc'
+        enum:
+        - created_time_asc
+        - created_time_desc
+        - num_comments_asc
+        - num_comments_desc
+        in: query
+        name: order
+        type: string
+      - description: Page number, default '1'
+        in: query
+        name: p
         type: string
       produces:
       - application/json
@@ -145,11 +444,39 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/user.AuthResponseJson'
-        "400":
-          description: Username already exists
+            $ref: '#/definitions/threads.SearchThreadResponse'
+        "405":
+          description: Method not allowed
         "500":
-          description: Internal Server Error
+          description: Internal server error
+      summary: Handles thread search requests
+      tags:
+      - thread
+  /user/create:
+    post:
+      consumes:
+      - application/json
+      description: Registers a new user with the given username and password
+      parameters:
+      - description: Username and password
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/models.AuthRequestJson'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AuthResponseJson'
+        "400":
+          description: Incorrect username/password
+        "405":
+          description: Method not allowed
+        "500":
+          description: Internal server error
       summary: Handles registration requests
       tags:
       - user
@@ -159,29 +486,27 @@ paths:
       - application/json
       description: Logs in a user with the given username and password
       parameters:
-      - description: Username
-        in: formData
-        name: username
+      - description: Username and password
+        in: body
+        name: data
         required: true
-        type: string
-      - description: Password
-        in: formData
-        name: password
-        required: true
-        type: string
+        schema:
+          $ref: '#/definitions/models.AuthRequestJson'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/user.AuthResponseJson'
+            $ref: '#/definitions/models.AuthResponseJson'
         "400":
-          description: Username does not exist
+          description: Invalid data
         "401":
-          description: Incorrect password
+          description: Incorrect username/password
+        "405":
+          description: Method not allowed
         "500":
-          description: Internal Server Error
+          description: Internal server error
       summary: Handles login requests
       tags:
       - user

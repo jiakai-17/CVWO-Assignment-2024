@@ -84,14 +84,11 @@ func (q *Queries) CheckThreadCreator(ctx context.Context, arg CheckThreadCreator
 }
 
 const checkUserExists = `-- name: CheckUserExists :one
-
 SELECT EXISTS
     (SELECT 1 FROM users WHERE LOWER(username) = LOWER($1))
 AS is_existing_user
 `
 
-// Queries for sqlc to generate Go code.
-// docker run --rm -v "%cd%:/src" -w /src sqlc/sqlc generate
 // Returns 1 if the user with the given username exists.
 func (q *Queries) CheckUserExists(ctx context.Context, lower string) (bool, error) {
 	row := q.db.QueryRow(ctx, checkUserExists, lower)
@@ -302,7 +299,7 @@ FROM users
 WHERE LOWER(username) = LOWER($1)
 `
 
-// Returns a user's password hash.
+// Returns a username and their password hash.
 func (q *Queries) GetPasswordHash(ctx context.Context, lower string) (User, error) {
 	row := q.db.QueryRow(ctx, getPasswordHash, lower)
 	var i User

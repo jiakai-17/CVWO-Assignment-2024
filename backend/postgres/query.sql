@@ -1,5 +1,6 @@
 -- Queries for sqlc to generate Go code.
 -- docker run --rm -v "%cd%:/src" -w /src sqlc/sqlc generate
+SELECT 1;
 
 -- Returns 1 if the user with the given username exists.
 -- name: CheckUserExists :one
@@ -14,7 +15,7 @@ INSERT INTO users (username, password)
 VALUES ($1, $2);
 
 
--- Returns a user's password hash.
+-- Returns a username and their password hash.
 -- name: GetPasswordHash :one
 SELECT username, password
 FROM users
