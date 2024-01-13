@@ -1,9 +1,8 @@
 package comments
 
 import (
-	"backend/database"
-	"backend/tutorial"
-	"backend/utils"
+	"backend/internal/database"
+	"backend/internal/utils"
 	"context"
 	"errors"
 	"github.com/gorilla/mux"
@@ -59,7 +58,7 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	conn := database.GetConnection()
 	defer database.CloseConnection(conn)
-	queries := tutorial.New(conn)
+	queries := database.New(conn)
 
 	// Create comment UUID for pg
 	var pgCommentId pgtype.UUID
@@ -76,7 +75,7 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user is the creator of the comment
-	isCreator, err := queries.CheckCommentCreator(ctx, tutorial.CheckCommentCreatorParams{
+	isCreator, err := queries.CheckCommentCreator(ctx, database.CheckCommentCreatorParams{
 		Creator: verifiedUsername,
 		ID:      pgCommentId})
 
@@ -92,7 +91,7 @@ func DeleteComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete the comment
-	err = queries.DeleteComment(ctx, tutorial.DeleteCommentParams{
+	err = queries.DeleteComment(ctx, database.DeleteCommentParams{
 		ID:      pgCommentId,
 		Creator: verifiedUsername,
 	})

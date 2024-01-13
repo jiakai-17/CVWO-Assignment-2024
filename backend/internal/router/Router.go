@@ -1,50 +1,23 @@
-package main
+package router
 
 import (
-	"backend/handlers/comments"
-	"backend/handlers/threads"
-	"backend/handlers/user"
-	"backend/utils"
+	"backend/internal/handlers/comments"
+	"backend/internal/handlers/threads"
+	"backend/internal/handlers/user"
 	"github.com/gorilla/mux"
-	"log"
 	"net/http"
 	"os"
 )
 
 var BASE_PATH = "/api/v1/"
 
-// @title           CVWO Forum Backend API
-// @version         1.0
-// @description     This is the backend API for the forum.
-
-// @license.name  All Rights Reserved.
-
-// @host      localhost:9090
-// @BasePath  /api/v1
-
-// @securityDefinitions.apikey Bearer
-// @in header
-// @name Authorization
-// @description The word "Bearer", followed by a space, and then the JWT token.
-func main() {
-
+// SetupRouter Sets up the router for the server
+func SetupRouter() *mux.Router {
 	r := mux.NewRouter()
-
-	//// Authentication (debug)
-	//if IS_DEBUG {
-	//	http.HandleFunc("/api/v1/getToken", debug.GetToken)
-	//	http.HandleFunc("/api/v1/verifyToken", debug.VerifyToken)
-	//}
 
 	// Get env variables
 	if os.Getenv("BASE_PATH") != "" {
 		BASE_PATH = os.Getenv("BASE_PATH")
-	}
-
-	var secretString = os.Getenv("JWT_SECRETSTRING")
-	if secretString == "" {
-		utils.Log("main", "No JWT secret string provided, using 'secretstring'", nil)
-		secretString = "secretstring"
 	}
 
 	// Routes
@@ -68,11 +41,5 @@ func main() {
 	// Search Threads
 	http.HandleFunc(BASE_PATH+"thread", threads.SearchThread)
 
-	// Start server
-	http.Handle("/", r)
-
-	utils.InitSecret(secretString)
-
-	utils.Log("main", "Listening on port 9090...", nil)
-	log.Fatal(http.ListenAndServe(":9090", nil))
+	return r
 }

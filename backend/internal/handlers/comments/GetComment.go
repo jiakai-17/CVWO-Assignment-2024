@@ -1,9 +1,8 @@
 package comments
 
 import (
-	"backend/database"
-	"backend/tutorial"
-	"backend/utils"
+	"backend/internal/database"
+	"backend/internal/utils"
 	"context"
 	"encoding/json"
 	"github.com/gorilla/mux"
@@ -14,7 +13,7 @@ import (
 )
 
 type GetCommentResponse struct {
-	Comments []tutorial.Comment `json:"comments"`
+	Comments []database.Comment `json:"comments"`
 	Count    int32              `json:"count"`
 }
 
@@ -69,7 +68,7 @@ func GetComment(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	conn := database.GetConnection()
 	defer database.CloseConnection(conn)
-	queries := tutorial.New(conn)
+	queries := database.New(conn)
 
 	var pgThreadId pgtype.UUID
 	err = pgThreadId.Scan(threadId)
@@ -85,7 +84,7 @@ func GetComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get the comments
-	comments, err := queries.GetComments(ctx, tutorial.GetCommentsParams{
+	comments, err := queries.GetComments(ctx, database.GetCommentsParams{
 		ThreadID:  pgThreadId,
 		Sortorder: order,
 		Offset:    int32(offset),

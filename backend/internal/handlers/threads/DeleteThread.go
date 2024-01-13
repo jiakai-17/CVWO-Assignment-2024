@@ -1,9 +1,8 @@
 package threads
 
 import (
-	"backend/database"
-	"backend/tutorial"
-	"backend/utils"
+	"backend/internal/database"
+	"backend/internal/utils"
 	"context"
 	"errors"
 	"github.com/gorilla/mux"
@@ -61,7 +60,7 @@ func DeleteThread(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	conn := database.GetConnection()
 	defer database.CloseConnection(conn)
-	queries := tutorial.New(conn)
+	queries := database.New(conn)
 
 	// Create thread UUID for pg
 	var pgThreadId pgtype.UUID
@@ -80,7 +79,7 @@ func DeleteThread(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if user is creator of thread
-	isThreadCreator, err := queries.CheckThreadCreator(ctx, tutorial.CheckThreadCreatorParams{
+	isThreadCreator, err := queries.CheckThreadCreator(ctx, database.CheckThreadCreatorParams{
 		Creator: verifiedUsername,
 		ID:      pgThreadId})
 
@@ -96,7 +95,7 @@ func DeleteThread(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete the thread
-	err = queries.DeleteThread(ctx, tutorial.DeleteThreadParams{
+	err = queries.DeleteThread(ctx, database.DeleteThreadParams{
 		ID:      pgThreadId,
 		Creator: verifiedUsername,
 	})

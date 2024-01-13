@@ -1,7 +1,7 @@
 package database
 
 import (
-	"backend/utils"
+	"backend/internal/utils"
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5"

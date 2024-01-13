@@ -1,9 +1,8 @@
 package threads
 
 import (
-	"backend/database"
-	"backend/tutorial"
-	"backend/utils"
+	"backend/internal/database"
+	"backend/internal/utils"
 	"context"
 	"encoding/json"
 	"errors"
@@ -105,7 +104,7 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	conn := database.GetConnection()
 	defer database.CloseConnection(conn)
-	queries := tutorial.New(conn)
+	queries := database.New(conn)
 
 	// Begin a new transaction
 	tx, err := conn.Begin(ctx)
@@ -141,7 +140,7 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 	qtx := queries.WithTx(tx)
 
 	// Create the thread
-	thread, err := qtx.CreateThread(ctx, tutorial.CreateThreadParams{
+	thread, err := qtx.CreateThread(ctx, database.CreateThreadParams{
 		Creator: verifiedUsername,
 		Title:   title,
 		Body:    body})
@@ -172,7 +171,7 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = qtx.AddThreadTags(ctx, tutorial.AddThreadTagsParams{
+	err = qtx.AddThreadTags(ctx, database.AddThreadTagsParams{
 		ThreadID: pgThreadId,
 		Tagarray: threadCreate.Tags})
 

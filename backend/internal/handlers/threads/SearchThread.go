@@ -1,9 +1,8 @@
 package threads
 
 import (
-	"backend/database"
-	"backend/tutorial"
-	"backend/utils"
+	"backend/internal/database"
+	"backend/internal/utils"
 	"context"
 	"encoding/json"
 	"errors"
@@ -20,7 +19,7 @@ type Pagination struct {
 
 type SearchThreadResponse struct {
 	TotalThreads int                                `json:"total_threads"`
-	Threads      []tutorial.GetThreadsByCriteriaRow `json:"threads"`
+	Threads      []database.GetThreadsByCriteriaRow `json:"threads"`
 }
 
 // SearchThread godoc
@@ -75,7 +74,7 @@ func SearchThread(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	conn := database.GetConnection()
 	defer database.CloseConnection(conn)
-	queries := tutorial.New(conn)
+	queries := database.New(conn)
 
 	keywords := strings.Split(queryString, " ")
 
@@ -93,7 +92,7 @@ func SearchThread(w http.ResponseWriter, r *http.Request) {
 	formattedKeywords := strings.Join(parsedKeywords, " & ")
 
 	// Get threads
-	threads, err := queries.GetThreadsByCriteria(ctx, tutorial.GetThreadsByCriteriaParams{
+	threads, err := queries.GetThreadsByCriteria(ctx, database.GetThreadsByCriteriaParams{
 		Limit:     int32(pageSize),
 		Offset:    int32(offset),
 		Sortorder: order,
@@ -112,7 +111,7 @@ func SearchThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	totalThreads, err := queries.GetThreadsByCriteriaCount(ctx, tutorial.GetThreadsByCriteriaCountParams{
+	totalThreads, err := queries.GetThreadsByCriteriaCount(ctx, database.GetThreadsByCriteriaCountParams{
 		Keywords: formattedKeywords,
 		Tagarray: parsedTagArray,
 	})

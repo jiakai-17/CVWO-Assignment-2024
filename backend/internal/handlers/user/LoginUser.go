@@ -1,10 +1,9 @@
 package user
 
 import (
-	"backend/database"
-	"backend/models"
-	"backend/tutorial"
-	"backend/utils"
+	"backend/internal/database"
+	"backend/internal/models"
+	"backend/internal/utils"
 	"context"
 	"encoding/json"
 	"errors"
@@ -59,7 +58,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	conn := database.GetConnection()
 	defer database.CloseConnection(conn)
-	queries := tutorial.New(conn)
+	queries := database.New(conn)
 
 	// Check if username exists
 	isExistingUser, err := queries.CheckUserExists(ctx, username)

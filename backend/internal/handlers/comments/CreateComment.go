@@ -1,9 +1,8 @@
 package comments
 
 import (
-	"backend/database"
-	"backend/tutorial"
-	"backend/utils"
+	"backend/internal/database"
+	"backend/internal/utils"
 	"context"
 	"encoding/json"
 	"errors"
@@ -82,7 +81,7 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	conn := database.GetConnection()
 	defer database.CloseConnection(conn)
-	queries := tutorial.New(conn)
+	queries := database.New(conn)
 
 	// Format threadId as pgtype.UUID for query
 	var pgThreadId pgtype.UUID
@@ -99,7 +98,7 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create the comment
-	params := tutorial.CreateCommentParams{
+	params := database.CreateCommentParams{
 		Body:     body,
 		Creator:  verifiedUsername,
 		ThreadID: pgThreadId,

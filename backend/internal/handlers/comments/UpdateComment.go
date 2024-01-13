@@ -1,9 +1,8 @@
 package comments
 
 import (
-	"backend/database"
-	"backend/tutorial"
-	"backend/utils"
+	"backend/internal/database"
+	"backend/internal/utils"
 	"context"
 	"encoding/json"
 	"github.com/gorilla/mux"
@@ -79,7 +78,7 @@ func UpdateComment(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	conn := database.GetConnection()
 	defer database.CloseConnection(conn)
-	queries := tutorial.New(conn)
+	queries := database.New(conn)
 
 	// Create comment UUID for pg
 	var pgCommentId pgtype.UUID
@@ -97,7 +96,7 @@ func UpdateComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user is the creator of the comment
-	isCreator, err := queries.CheckCommentCreator(ctx, tutorial.CheckCommentCreatorParams{
+	isCreator, err := queries.CheckCommentCreator(ctx, database.CheckCommentCreatorParams{
 		Creator: verifiedUsername,
 		ID:      pgCommentId})
 
@@ -113,7 +112,7 @@ func UpdateComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update the comment
-	err = queries.UpdateComment(ctx, tutorial.UpdateCommentParams{
+	err = queries.UpdateComment(ctx, database.UpdateCommentParams{
 		Body:    body,
 		Creator: verifiedUsername,
 		ID:      pgCommentId,

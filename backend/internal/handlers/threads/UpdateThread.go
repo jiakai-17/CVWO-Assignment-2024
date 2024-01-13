@@ -1,9 +1,8 @@
 package threads
 
 import (
-	"backend/database"
-	"backend/tutorial"
-	"backend/utils"
+	"backend/internal/database"
+	"backend/internal/utils"
 	"context"
 	"encoding/json"
 	"errors"
@@ -111,7 +110,7 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	conn := database.GetConnection()
 	defer database.CloseConnection(conn)
-	queries := tutorial.New(conn)
+	queries := database.New(conn)
 
 	// Begin a new transaction
 	tx, err := conn.Begin(ctx)
@@ -164,7 +163,7 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if user is creator of thread
-	isThreadCreator, err := qtx.CheckThreadCreator(ctx, tutorial.CheckThreadCreatorParams{
+	isThreadCreator, err := qtx.CheckThreadCreator(ctx, database.CheckThreadCreatorParams{
 		Creator: verifiedUsername,
 		ID:      pgThreadId})
 	if err != nil || !isThreadCreator {
@@ -179,7 +178,7 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update the thread
-	err = qtx.UpdateThread(ctx, tutorial.UpdateThreadParams{
+	err = qtx.UpdateThread(ctx, database.UpdateThreadParams{
 		ID:      pgThreadId,
 		Title:   title,
 		Body:    body,
@@ -228,7 +227,7 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = qtx.AddThreadTags(ctx, tutorial.AddThreadTagsParams{
+	err = qtx.AddThreadTags(ctx, database.AddThreadTagsParams{
 		ThreadID: pgThreadId,
 		Tagarray: tags})
 	if err != nil {

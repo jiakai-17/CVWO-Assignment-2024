@@ -3,14 +3,21 @@ package utils
 import (
 	"errors"
 	"github.com/golang-jwt/jwt/v5"
+	"os"
 	"time"
 )
 
 var SECRET []byte = nil
 
-// InitSecret Initializes the secret used to sign JWT tokens. Must be called before any JWT operations.
-func InitSecret(secretstring string) {
-	SECRET = []byte(secretstring)
+// InitJwtSecret Initializes the secret used to sign JWT tokens. Must be called before any JWT operations.
+func InitJwtSecret() {
+	secretString := os.Getenv("JWT_SECRETSTRING")
+	if secretString == "" {
+		Log("main", "No JWT secret string provided, using 'secretstring'", nil)
+		secretString = "secretstring"
+	}
+
+	SECRET = []byte(secretString)
 }
 
 // CreateJWT Creates a new JWT token with the username as the payload. Valid for 24 hours.

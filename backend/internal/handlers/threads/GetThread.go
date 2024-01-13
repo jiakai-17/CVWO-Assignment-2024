@@ -1,9 +1,8 @@
 package threads
 
 import (
-	"backend/database"
-	"backend/tutorial"
-	"backend/utils"
+	"backend/internal/database"
+	"backend/internal/utils"
 	"context"
 	"encoding/json"
 	"errors"
@@ -45,7 +44,7 @@ func GetThread(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	conn := database.GetConnection()
 	defer database.CloseConnection(conn)
-	queries := tutorial.New(conn)
+	queries := database.New(conn)
 
 	var pgThreadId pgtype.UUID
 	err := pgThreadId.Scan(id)
