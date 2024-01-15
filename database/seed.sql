@@ -1,4 +1,5 @@
-INSERT INTO users VALUES ('testuser', 'password');
+-- username: testuser, password: testuser
+INSERT INTO users VALUES ('testuser', '$2y$10$0h0No1uuSBWp6LKnKiEIxuwt.qVjGfHWABY10PzAhR2m98Jfm3AeS');
 
 INSERT INTO threads (id, title, body, creator) VALUES ('11223344-4444-4444-4444-000000000001', 'Hello World!', 'This is my first thread', 'testuser');
 

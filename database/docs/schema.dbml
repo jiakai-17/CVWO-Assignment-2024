@@ -4,16 +4,17 @@ Table "users" {
 }
 
 Table "threads" {
-  "id" VARCHAR(36) [pk]
+  "id" UUID [pk, default: `GEN_RANDOM_UUID()`]
   "title" TEXT [not null]
   "body" TEXT [not null]
   "creator" VARCHAR(64) [not null]
   "created_time" TIMESTAMP [not null, default: `NOW()`]
   "updated_time" TIMESTAMP [not null, default: `NOW()`]
+  "num_comments" INTEGER [not null, default: `0`]
 }
 
 Table "comments" {
-  "id" VARCHAR(36) [pk]
+  "id" UUID [pk, default: `GEN_RANDOM_UUID()`]
   "body" TEXT [not null]
   "creator" VARCHAR(64) [not null]
   "thread_id" TEXT [not null]
@@ -26,7 +27,7 @@ Table "tags" {
 }
 
 Table "thread_tags" {
-  "thread_id" VARCHAR(36) [not null]
+  "thread_id" UUID [not null]
   "tag_name" VARCHAR(64) [not null]
 
 Indexes {
