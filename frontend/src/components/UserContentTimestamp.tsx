@@ -1,5 +1,6 @@
 import { ListItemText, Tooltip } from "@mui/material";
 
+// Formats and displays the timestamp of a user's content
 export default function UserContentTimestamp(
   props: Readonly<{
     createdTimestamp: Date;

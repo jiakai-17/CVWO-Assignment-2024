@@ -2,6 +2,7 @@ import { createContext } from "react";
 
 const AuthContext = createContext({
   auth: {
+    // The object that describes the current authentication status
     username: "",
     token: "",
     iat: 0,
@@ -9,10 +10,13 @@ const AuthContext = createContext({
     isLogin: false,
   },
   setAuthFromToken: (token: string) => {
-    // dummy function to prevent typescript warning about unused variables
+    // Set the authentication status from a token
     ((x) => x)(token);
   },
-  resetAuth: () => {},
+  resetAuth: () => {
+    // Reset the authentication status to empty
+  },
+  // Whether the context has fully loaded
   isLoaded: false,
 });
 

@@ -5,6 +5,7 @@ import MenuItem from "@mui/material/MenuItem";
 import SortIcon from "@mui/icons-material/Sort";
 import { useState } from "react";
 
+// Creates a button that opens a menu to show available sort criteria
 export default function SortButton(
   props: Readonly<{
     availableSortCriteriaMappings: Map<string, string>;
@@ -23,11 +24,8 @@ export default function SortButton(
     setAnchorEl(null);
   };
 
-  const handleMenuItemClick = (event: React.MouseEvent<HTMLElement>) => {
-    const chosenCriteria = event.currentTarget.innerText;
-    if (props.availableSortCriteriaMappings.has(chosenCriteria)) {
-      props.setSortCriteria(chosenCriteria);
-    }
+  const handleMenuItemClick = (criteria: string) => {
+    props.setSortCriteria(criteria);
     handleClose();
   };
 
@@ -57,7 +55,7 @@ export default function SortButton(
         {Array.from(props.availableSortCriteriaMappings.keys()).map((criteria) => (
           <MenuItem
             key={criteria}
-            onClick={handleMenuItemClick}
+            onClick={() => handleMenuItemClick(criteria)}
           >
             {criteria}
           </MenuItem>

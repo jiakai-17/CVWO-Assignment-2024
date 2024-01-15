@@ -1,14 +1,15 @@
 import Box from "@mui/material/Box";
-import UserAvatarDetails from "../components/UserAvatarDetails.tsx";
-import UserContentTimestamp from "../components/UserContentTimestamp.tsx";
+import UserAvatarDetails from "./UserAvatarDetails.tsx";
+import UserContentTimestamp from "./UserContentTimestamp.tsx";
 import Typography from "@mui/material/Typography";
-import { Divider } from "@mui/material";
+import { Alert, Divider } from "@mui/material";
 import Button from "@mui/material/Button";
-import Comment from "../models/comment/Comment.tsx";
+import Comment from "../models/Comment.tsx";
 import { useContext, useEffect, useState } from "react";
-import CommentTextField from "../components/CommentTextField.tsx";
+import CommentTextField from "./CommentTextField.tsx";
 import AuthContext from "../contexts/AuthContext.tsx";
 
+// Renders a single comment on a thread
 export function ThreadComment(
   props: Readonly<{
     comment: Comment;
@@ -17,8 +18,9 @@ export function ThreadComment(
 ) {
   const [currentComment, setCurrentComment] = useState(props.comment);
   const [editedCommentBody, setEditedCommentBody] = useState(props.comment.body);
-
   const [isEditing, setIsEditing] = useState(false);
+  const [isError, setIsError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const { auth, isLoaded } = useContext(AuthContext);
 
@@ -35,7 +37,23 @@ export function ThreadComment(
     setIsEditing(true);
   }
 
+  const checkInvalidCommentBody = () => {
+    if (editedCommentBody.length < 1 || editedCommentBody.length > 3000) {
+      setIsError(true);
+      setErrorMessage("Comment must be between 1 and 3000 characters.");
+      return true;
+    }
+    setIsError(false);
+    setErrorMessage("");
+    return false;
+  };
+
   function handleSave() {
+    setIsError(false);
+    setErrorMessage("");
+    if (checkInvalidCommentBody()) {
+      return;
+    }
     fetch(`/api/v1/comment/${props.comment.id}`, {
       method: "PUT",
       headers: {
@@ -45,8 +63,10 @@ export function ThreadComment(
       body: JSON.stringify({ body: editedCommentBody }),
     }).then((res) => {
       if (!res.ok) {
-        console.log("edit failed");
-        res.text().then((text) => console.log(text));
+        res.text().then((text) => {
+          setIsError(true);
+          setErrorMessage(text);
+        });
       } else {
         setIsEditing(false);
         setCurrentComment({
@@ -60,6 +80,9 @@ export function ThreadComment(
 
   function handleCancel() {
     setIsEditing(false);
+    setEditedCommentBody(currentComment.body);
+    setIsError(false);
+    setErrorMessage("");
   }
 
   // Delete comment
@@ -69,6 +92,8 @@ export function ThreadComment(
     if (!shouldDelete) {
       return;
     } else {
+      setIsError(false);
+      setErrorMessage("");
       fetch(`/api/v1/comment/${props.comment.id}`, {
         method: "DELETE",
         headers: {
@@ -76,10 +101,12 @@ export function ThreadComment(
         },
       }).then((res) => {
         if (!res.ok) {
-          console.log("delete failed");
-          res.text().then((text) => console.log(text));
+          res.text().then((text) => {
+            setIsError(true);
+            setErrorMessage(text);
+          });
         } else {
-          console.log("delete success");
+          setIsEditing(false);
           setIsDeleted(true);
           props.deleteComment();
         }
@@ -135,14 +162,24 @@ export function ThreadComment(
             </Box>
           </Box>
           {isEditing && (
-            <CommentTextField
-              setCommentContent={setEditedCommentBody}
-              handleSubmit={handleSave}
-              defaultContent={currentComment.body}
-              submitButtonLabel={"Save"}
-              textFieldLabel={"Edit your comment..."}
-              handleCancel={handleCancel}
-            />
+            <>
+              {isError && (
+                <Alert
+                  severity="error"
+                  className={"mx-8 my-6 whitespace-pre-line"}
+                >
+                  {errorMessage}
+                </Alert>
+              )}
+              <CommentTextField
+                setCommentContent={setEditedCommentBody}
+                handleSubmit={handleSave}
+                defaultContent={currentComment.body}
+                submitButtonLabel={"Save"}
+                textFieldLabel={"Edit your comment... (max 3000 chars)"}
+                handleCancel={handleCancel}
+              />
+            </>
           )}
           {!isEditing && <Typography sx={{ pb: 2, whiteSpace: "pre-line" }}>{currentComment.body}</Typography>}
           {!isEditing && isCommentCreator && (

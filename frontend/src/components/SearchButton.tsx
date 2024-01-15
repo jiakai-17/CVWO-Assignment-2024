@@ -1,6 +1,7 @@
 import SearchIcon from "@mui/icons-material/Search";
 import Button from "@mui/material/Button";
 
+// Creates a search button
 export default function SearchButton(
   props: Readonly<{
     size: "small" | "large";

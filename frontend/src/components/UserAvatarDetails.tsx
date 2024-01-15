@@ -1,6 +1,7 @@
 import { toSvg } from "jdenticon";
 import Typography from "@mui/material/Typography";
 
+// Renders a user avatar with the username
 export default function UserAvatarDetails(
   props: Readonly<{
     creator: string;

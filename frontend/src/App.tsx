@@ -3,9 +3,11 @@ import { Outlet, ScrollRestoration } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import AuthContext from "./contexts/AuthContext.tsx";
 import { jwtDecode } from "jwt-decode";
-import { JWTPayload } from "./pages/AuthPage.tsx";
+import JWTPayload from "./models/JwtPayload.tsx";
 
 function App() {
+  // AuthContext
+
   const emptyAuth = useMemo(() => {
     return { username: "", token: "", iat: 0, exp: 0, isLogin: false };
   }, []);
@@ -34,10 +36,10 @@ function App() {
         };
         setAuth(newAuth);
       } catch (e) {
-        setAuth(emptyAuth);
+        resetAuth();
       }
     },
-    [emptyAuth],
+    [resetAuth],
   );
 
   // Automatically log in if token is found in local storage
@@ -56,7 +58,7 @@ function App() {
       resetAuth,
       isLoaded: isLoaded,
     }),
-    [auth, resetAuth, setAuthFromToken],
+    [auth, isLoaded, resetAuth, setAuthFromToken],
   );
 
   return (

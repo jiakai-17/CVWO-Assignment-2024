@@ -4,14 +4,8 @@ import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useNavigate } from "react-router-dom";
-import { CircularProgress, Divider } from "@mui/material";
+import { Alert, CircularProgress, Divider } from "@mui/material";
 import AuthContext from "../contexts/AuthContext.tsx";
-
-export type JWTPayload = {
-  username: string;
-  iat: number;
-  exp: number;
-};
 
 export default function AuthPage(
   props: Readonly<{
@@ -72,13 +66,27 @@ export default function AuthPage(
     const isInvalidPassword = checkInvalidPassword();
 
     if (isInvalidUsername || isInvalidPassword) {
-      console.log("Invalid username or password");
       setIsLoading(false);
       return;
     }
 
+    const handleApiResponse = (response: Response) => {
+      if (response.status === 200) {
+        response.json().then((data) => {
+          localStorage.setItem("token", data.token);
+          setAuthFromToken(data.token);
+          navigate("/");
+        });
+      } else {
+        setIsLoading(false);
+        response.text().then((text) => {
+          setIsError(true);
+          setErrorMessage(text);
+        });
+      }
+    };
+
     if (props.type === "login") {
-      console.log("Logging in with username", username, "and password", password);
       fetch("/api/v1/user/login", {
         method: "POST",
         headers: {
@@ -88,23 +96,8 @@ export default function AuthPage(
           username,
           password,
         }),
-      }).then((response) => {
-        if (response.status === 200) {
-          response.json().then((data) => {
-            localStorage.setItem("token", data.token);
-            setAuthFromToken(data.token);
-            navigate("/");
-          });
-        } else {
-          setIsLoading(false);
-          response.text().then((text) => {
-            setIsError(true);
-            setErrorMessage(text);
-          });
-        }
-      });
+      }).then(handleApiResponse);
     } else if (props.type === "signup") {
-      console.log("Signing up with username", username, "and password", password);
       fetch("/api/v1/user/create", {
         method: "POST",
         headers: {
@@ -114,21 +107,7 @@ export default function AuthPage(
           username,
           password,
         }),
-      }).then((response) => {
-        if (response.status === 200) {
-          response.json().then((data) => {
-            localStorage.setItem("token", data.token);
-            setAuthFromToken(data.token);
-            navigate("/");
-          });
-        } else {
-          setIsLoading(false);
-          response.text().then((text) => {
-            setIsError(true);
-            setErrorMessage(text);
-          });
-        }
-      });
+      }).then(handleApiResponse);
     } else {
       throw new Error("Invalid auth page type");
     }
@@ -184,13 +163,12 @@ export default function AuthPage(
             }}
           />
           {isError && (
-            <Typography
-              variant="body1"
-              color="error"
-              sx={{ mt: 1 }}
+            <Alert
+              severity="error"
+              className={"mt-3"}
             >
               {errorMessage}
-            </Typography>
+            </Alert>
           )}
           <Button
             type="submit"

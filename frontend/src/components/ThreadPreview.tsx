@@ -1,13 +1,13 @@
 import Box from "@mui/material/Box";
 import { ListItemText } from "@mui/material";
 import Typography from "@mui/material/Typography";
-import Thread from "../models/thread/Thread.tsx";
+import Thread from "../models/Thread.tsx";
 import { Link } from "react-router-dom";
 import UserAvatarDetails from "./UserAvatarDetails.tsx";
 import UserContentTimestamp from "./UserContentTimestamp.tsx";
 import ThreadTag from "./ThreadTag.tsx";
 
-// Creates a thread component to be displayed in the list
+// Creates a preview of a thread to be displayed in the list of threads on the main page
 export default function ThreadPreview(t: Readonly<Thread>) {
   return (
     <Box className={"xs:mx-0 mx-2 my-2 w-full overflow-hidden rounded-md border-2 border-solid border-gray-300"}>

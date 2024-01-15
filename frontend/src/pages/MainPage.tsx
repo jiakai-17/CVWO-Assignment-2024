@@ -1,7 +1,17 @@
 import { ChangeEvent, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import { CircularProgress, Divider, IconButton, List, ListItem, Pagination, Stack, useMediaQuery } from "@mui/material";
+import {
+  Alert,
+  CircularProgress,
+  Divider,
+  IconButton,
+  List,
+  ListItem,
+  Pagination,
+  Stack,
+  useMediaQuery,
+} from "@mui/material";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import SearchButton from "../components/SearchButton.tsx";
@@ -9,18 +19,24 @@ import SortButton from "../components/SortButton.tsx";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import ThreadPreview from "../components/ThreadPreview.tsx";
 import AuthContext from "../contexts/AuthContext.tsx";
-import Thread from "../models/thread/Thread.tsx";
+import Thread from "../models/Thread.tsx";
 import ClearIcon from "@mui/icons-material/Clear";
 
 export default function Page() {
   const [isLogin, setIsLogin] = useState(false);
   const navigate = useNavigate();
 
-  // Auth
-  const { auth } = useContext(AuthContext);
+  const [isError, setIsError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  // Update login status
+  const { auth, isLoaded } = useContext(AuthContext);
   useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
     setIsLogin(auth.isLogin);
-  }, [auth.isLogin]);
+  }, [auth.isLogin, isLoaded]);
 
   // Responsive design
   const isSmallScreen = useMediaQuery("(max-width: 600px)");
@@ -29,9 +45,11 @@ export default function Page() {
   // Get the query from the URL
   const [searchParams] = useSearchParams();
   const hasSearchQuery = searchParams.has("q");
+
+  // searchQuery is the query to be used in the API call
   const [searchQuery, setSearchQuery] = useState(hasSearchQuery ? searchParams.get("q") : "");
 
-  // Query in the search box
+  // inputQuery is the query to be displayed in the search bar
   const [inputQuery, setInputQuery] = useState(hasSearchQuery ? searchParams.get("q") : "");
 
   // List of threads to display
@@ -42,7 +60,6 @@ export default function Page() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const handlePageChange = (_event: ChangeEvent<unknown>, value: number) => {
-    console.log("page changed", value);
     setCurrentPage(value);
   };
 
@@ -62,8 +79,6 @@ export default function Page() {
   // API call to search
   const [isLoading, setIsLoading] = useState(true);
   const handleSearch = useCallback(() => {
-    console.log("searching...", searchQuery, threadSortCriteria);
-
     setIsLoading(true);
     fetch(
       "/api/v1/thread?q=" +
@@ -75,56 +90,59 @@ export default function Page() {
     )
       .then((response) => {
         if (response.ok) {
-          return response.json();
+          response.json().then((data) => {
+            setThreads(data.threads);
+            setTotalPages(Math.max(1, Math.ceil(data.total_threads / threadsPerPage)));
+          });
         } else {
-          throw new Error("Something went wrong");
+          response.text().then((text) => {
+            setIsError(true);
+            setErrorMessage(text);
+            console.error(text);
+          });
         }
       })
-      .then((data) => {
-        console.log(data);
-        setThreads(data.threads);
-        setTotalPages(Math.max(1, Math.ceil(data.total_threads / threadsPerPage)));
-        setIsLoading(false);
-      })
-      .catch((error) => {
-        console.log(error);
+      .then(() => {
         setIsLoading(false);
       });
   }, [availableThreadSortCriteria, currentPage, searchQuery, threadSortCriteria]);
 
+  // Updates the URL with the new search query and sort criteria
   const updateUrl = (searchQuery: string, sortCriteria: string) => {
     navigate("/?q=" + searchQuery + "&order=" + availableThreadSortCriteria.get(sortCriteria));
   };
 
-  // Run a search whenever the page changes
+  // Runs a search whenever the url changes
   useEffect(() => {
     const hasSearchQuery = searchParams.has("q");
-    console.log("has search query", hasSearchQuery);
     if (hasSearchQuery) {
-      console.log("found query in url", searchQuery);
       setSearchQuery(searchParams.get("q") ?? "");
       setInputQuery(searchParams.get("q") ?? "");
+      setCurrentPage(1);
     }
     handleSearch();
   }, [handleSearch, hasSearchQuery, searchParams, searchQuery, setSearchQuery]);
 
-  // Run a search whenever the sort criteria changes
+  // Updates the URL when the sort criteria changes
   const handleSortCriteriaClick = (newCriteria: string) => {
     setThreadSortCriteria(newCriteria);
+    setCurrentPage(1);
     updateUrl(searchQuery ?? "", newCriteria);
   };
-  // Run a search whenever the search button is clicked or the enter key is pressed
+
+  // Updates the URL when the search button is clicked
   const handleSearchButtonClick = () => {
-    console.log("search requested", inputQuery);
     setSearchQuery(inputQuery);
+    setCurrentPage(1);
     updateUrl(inputQuery ?? "", threadSortCriteria);
   };
 
+  // Updates the URL when the clear button is clicked
   const resetSearch = () => {
-    console.log("resetting search");
     setInputQuery("");
     setThreadSortCriteria("Newest first");
     setSearchQuery("");
+    setCurrentPage(1);
     navigate("/");
   };
 
@@ -202,6 +220,14 @@ export default function Page() {
         </Box>
       )}
       <div className={"mt-8"}>
+        {isError && (
+          <Alert
+            severity={"error"}
+            className={"mx-6 my-6"}
+          >
+            {"An error occurred while fetching threads " + errorMessage}
+          </Alert>
+        )}
         {!isLoading && (
           <Stack alignItems="center">
             <Pagination

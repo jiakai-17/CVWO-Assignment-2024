@@ -7,14 +7,18 @@ import UserAvatarDetails from "./UserAvatarDetails";
 import { Link, useNavigate } from "react-router-dom";
 import AuthContext from "../contexts/AuthContext.tsx";
 
+// Creates a navbar component to be displayed at the top of the page
 export default function Navbar() {
   const navigate = useNavigate();
-  const { auth, resetAuth } = useContext(AuthContext);
+  const { auth, resetAuth, isLoaded } = useContext(AuthContext);
   const [isLogin, setIsLogin] = useState(auth.isLogin);
 
   useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
     setIsLogin(auth.isLogin);
-  }, [auth.isLogin]);
+  }, [auth.isLogin, isLoaded]);
 
   const handleLogout = () => {
     resetAuth();

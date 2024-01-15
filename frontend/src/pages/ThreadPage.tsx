@@ -1,52 +1,79 @@
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import { CircularProgress, Divider, ListItemText } from "@mui/material";
+import { Alert, CircularProgress, Divider, ListItemText } from "@mui/material";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import ThreadTag from "../components/ThreadTag.tsx";
 import UserContentTimestamp from "../components/UserContentTimestamp.tsx";
 import UserAvatarDetails from "../components/UserAvatarDetails.tsx";
 import SortButton from "../components/SortButton.tsx";
-import Comment from "../models/comment/Comment.tsx";
-import Thread from "../models/thread/Thread.tsx";
+import Comment from "../models/Comment.tsx";
+import Thread from "../models/Thread.tsx";
 import CommentTextField from "../components/CommentTextField.tsx";
-import { ThreadComment } from "./ThreadComment.tsx";
+import { ThreadComment } from "../components/ThreadComment.tsx";
 import authContext from "../contexts/AuthContext.tsx";
 
 export default function ThreadPage() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [threadToDisplay, setThreadToDisplay] = useState<Thread | null>(null);
   const { auth } = useContext(authContext);
   const navigate = useNavigate();
 
+  // Loading Thread
+  const [isLoadingThread, setIsLoadingThread] = useState(true);
+  const [threadErrorMessage, setThreadErrorMessage] = useState("");
+  const [threadToDisplay, setThreadToDisplay] = useState<Thread | null>(null);
+
+  // Load thread on page load
   useEffect(() => {
     const id = window.location.pathname.split("/")[2];
     fetch(`/api/v1/thread/${id}`).then((res) => {
       if (!res.ok) {
-        setIsLoading(false);
-        res.text().then((text) => setErrorMessage(text));
+        setIsLoadingThread(false);
+        res.text().then((text) => setThreadErrorMessage(text));
         setThreadToDisplay(null);
       } else {
-        setIsLoading(false);
-        setErrorMessage("");
+        setIsLoadingThread(false);
+        setThreadErrorMessage("");
         res.json().then((data) => setThreadToDisplay(data));
       }
     });
   }, []);
 
-  // Fetch comments
+  const handleDeleteThread = () => {
+    setThreadErrorMessage("");
+    const shouldDelete = confirm("Are you sure you want to delete this thread? This action cannot be undone.");
+    if (shouldDelete) {
+      fetch(`/api/v1/thread/${threadToDisplay?.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${auth.token}`,
+          "Content-Type": "application/json",
+        },
+      }).then((res) => {
+        if (!res.ok) {
+          res.text().then((text) => {
+            setThreadErrorMessage(text);
+          });
+        } else {
+          navigate("/");
+        }
+      });
+    }
+  };
+
+  // Comments
   const [comments, setComments] = useState([] as Comment[]);
+
   // Load more comments
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [totalComments, setTotalComments] = useState(threadToDisplay?.num_comments ?? 0);
 
-  // Sorting comments by criteria
-  const [commentSortCriteria, setCommentSortCriteria] = useState("Newest first");
+  const [isLoadingCommentError, setIsLoadingCommentError] = useState(false);
+  const [loadingCommentErrorMessage, setLoadingCommentErrorMessage] = useState("");
 
+  const [commentSortCriteria, setCommentSortCriteria] = useState("Newest first");
   const availableCommentSortCriteria = useMemo(
     () =>
       new Map<string, string>([
@@ -67,7 +94,10 @@ export default function ThreadPage() {
     const sortCriteria = availableCommentSortCriteria.get(commentSortCriteria);
     fetch(`/api/v1/thread/${threadToDisplay?.id}/comments?p=${page}&order=${sortCriteria}`).then((res) => {
       if (!res.ok) {
-        res.text().then((text) => console.log(text));
+        res.text().then((text) => {
+          setIsLoadingCommentError(true);
+          setLoadingCommentErrorMessage(text);
+        });
         setIsLoadingComments(false);
       } else {
         console.log(comments);
@@ -85,13 +115,21 @@ export default function ThreadPage() {
     });
   };
 
-  // fetch on load
+  // Fetch comments after thread has loaded
   useEffect(() => {
     if (threadToDisplay === null) {
       return;
     }
     fetchComments(1, commentSortCriteria, false);
+    // We only want to fetch comments when the thread changes (e.g. when it is first loaded)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threadToDisplay]);
+
+  const handleLoadMoreComments = () => {
+    if (currentPage < totalPages) {
+      fetchComments(currentPage + 1, commentSortCriteria, true);
+    }
+  };
 
   const handleSetCommentSortCriteria = (criteria: string) => {
     setCommentSortCriteria(criteria);
@@ -99,16 +137,28 @@ export default function ThreadPage() {
   };
 
   // Adding Comments
-  const [commentContent, setCommentContent] = useState("");
-  useEffect(() => {
-    console.log("comment content changed", commentContent);
-  }, [commentContent]);
+  const [newCommentBody, setNewCommentBody] = useState("");
+  const [isNewCommentError, setIsNewCommentError] = useState(false);
+  const [newCommentErrorMessage, setNewCommentErrorMessage] = useState("");
+
+  const checkInvalidCommentBody = () => {
+    const trimmedCommentBody = newCommentBody.trim();
+    if (trimmedCommentBody.length < 1 || trimmedCommentBody.length > 3000) {
+      setIsNewCommentError(true);
+      setNewCommentErrorMessage("Comment must be between 1 and 3000 characters.");
+      return true;
+    }
+    setIsNewCommentError(false);
+    setNewCommentErrorMessage("");
+    return false;
+  };
 
   const handleSubmitComment = () => {
-    if (commentContent.trim() == "") {
+    setIsNewCommentError(false);
+    setNewCommentErrorMessage("");
+    if (checkInvalidCommentBody()) {
       return;
     }
-    console.log("submit comment", commentContent);
     fetch(`/api/v1/comment/create`, {
       method: "POST",
       headers: {
@@ -117,48 +167,23 @@ export default function ThreadPage() {
       },
       body: JSON.stringify({
         thread_id: threadToDisplay?.id,
-        body: commentContent,
+        body: newCommentBody,
       }),
     }).then((res) => {
       if (!res.ok) {
         res.text().then((text) => {
-          console.log(text);
+          setIsNewCommentError(true);
+          setNewCommentErrorMessage(text);
         });
       } else {
-        res.json().then((data) => console.log(data));
-        setCommentContent("");
+        setNewCommentBody("");
         fetchComments(1, commentSortCriteria, false);
       }
     });
   };
 
-  const handleLoadMoreComments = () => {
-    if (currentPage < totalPages) {
-      fetchComments(currentPage + 1, commentSortCriteria, true);
-    }
-  };
-
-  const handleDeleteThread = () => {
-    const shouldDelete = confirm("Are you sure you want to delete this thread? This action cannot be undone.");
-    if (shouldDelete) {
-      fetch(`/api/v1/thread/${threadToDisplay?.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${auth.token}`,
-          "Content-Type": "application/json",
-        },
-      }).then((res) => {
-        if (!res.ok) {
-          res.text().then((text) => console.log(text));
-        } else {
-          navigate("/");
-        }
-      });
-    }
-  };
-
-  // delete comment
-  const deleteComment = () => {
+  // Reloads comments after a comment is deleted
+  const onDeleteComment = () => {
     fetchComments(1, commentSortCriteria, false);
   };
 
@@ -176,7 +201,7 @@ export default function ThreadPage() {
         </Link>
       </Box>
 
-      {isLoading && (
+      {isLoadingThread && (
         <div className={"flex flex-row justify-center"}>
           <CircularProgress />
           <Typography
@@ -188,25 +213,16 @@ export default function ThreadPage() {
         </div>
       )}
 
-      {!isLoading && threadToDisplay === null && (
-        <Box
-          sx={{
-            mx: 2,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-          }}
+      {!isLoadingThread && threadToDisplay === null && (
+        <Alert
+          severity={"error"}
+          className={"mx-8 my-6"}
         >
-          <Typography
-            variant="h4"
-            sx={{ mb: 6 }}
-          >
-            {errorMessage}
-          </Typography>
-        </Box>
+          {threadErrorMessage}
+        </Alert>
       )}
 
-      {!isLoading && threadToDisplay !== null && (
+      {!isLoadingThread && threadToDisplay !== null && (
         <>
           <Box
             sx={{
@@ -313,6 +329,14 @@ export default function ThreadPage() {
             {threadToDisplay.creator === auth.username && (
               <>
                 <Divider />
+                {threadErrorMessage !== "" && (
+                  <Alert
+                    severity={"error"}
+                    className={"my-6"}
+                  >
+                    {threadErrorMessage}
+                  </Alert>
+                )}
                 <Box className={"my-4 flex items-center justify-end"}>
                   <Link to={`/viewthread/${threadToDisplay.id}/edit`}>
                     <Button
@@ -338,9 +362,18 @@ export default function ThreadPage() {
           </Box>
 
           <Divider sx={{ mx: 4, my: 4 }} />
+          {isNewCommentError && (
+            <Alert
+              severity={"error"}
+              className={"mx-8 my-6"}
+            >
+              {newCommentErrorMessage}
+            </Alert>
+          )}
           <CommentTextField
-            setCommentContent={setCommentContent}
+            setCommentContent={setNewCommentBody}
             handleSubmit={handleSubmitComment}
+            defaultContent={newCommentBody}
           />
           <Divider sx={{ mx: 4, mt: 2, mb: 4 }} />
           <Box
@@ -361,11 +394,19 @@ export default function ThreadPage() {
             />
           </Box>
           <Box sx={{ mx: 4, mb: 20 }}>
+            {isLoadingCommentError && (
+              <Alert
+                severity={"error"}
+                className={"mx-8 my-6"}
+              >
+                {loadingCommentErrorMessage}
+              </Alert>
+            )}
             {comments.map((comment) => (
               <ThreadComment
                 key={comment.id}
                 comment={comment}
-                deleteComment={deleteComment}
+                deleteComment={onDeleteComment}
               />
             ))}
             {isLoadingComments && (

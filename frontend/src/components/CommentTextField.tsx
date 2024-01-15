@@ -1,13 +1,11 @@
-"use client";
-
 import TextField from "@mui/material/TextField";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-
 import { useContext, useEffect, useState } from "react";
 import Typography from "@mui/material/Typography";
 import AuthContext from "../contexts/AuthContext.tsx";
 
+// Creates a text field for the user to create/edit a new comment
 export default function CommentTextField(
   props: Readonly<{
     setCommentContent: (content: string) => void;
@@ -31,6 +29,10 @@ export default function CommentTextField(
 
   const [commentContent, setCommentContent] = useState(props.defaultContent ?? "");
 
+  useEffect(() => {
+    setCommentContent(props.defaultContent ?? "");
+  }, [props.defaultContent]);
+
   const setCommentCallback = props.setCommentContent;
   const handleSubmitCallback = props.handleSubmit;
 
@@ -40,7 +42,6 @@ export default function CommentTextField(
 
   function onSubmit() {
     handleSubmitCallback();
-    setCommentContent("");
   }
 
   return (
@@ -54,7 +55,7 @@ export default function CommentTextField(
         <>
           <TextField
             id="outlined-multiline-static"
-            label={props.textFieldLabel ?? "Leave a comment..."}
+            label={props.textFieldLabel ?? "Leave a comment... (max 3000 chars)"}
             multiline
             rows={3}
             variant="outlined"
