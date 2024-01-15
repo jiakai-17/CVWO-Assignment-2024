@@ -66,7 +66,7 @@ func SearchThreads(w http.ResponseWriter, r *http.Request) {
 	defer database.CloseConnection(conn)
 	queries := database.New(conn)
 
-	keywords := strings.Split(queryString, " ")
+	keywords := strings.Split(strings.TrimSpace(queryString), " ")
 
 	var parsedKeywords []string
 	var parsedTagArray []string

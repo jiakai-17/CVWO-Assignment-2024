@@ -21,6 +21,7 @@ import ThreadPreview from "../components/ThreadPreview.tsx";
 import AuthContext from "../contexts/AuthContext.tsx";
 import Thread from "../models/Thread.tsx";
 import ClearIcon from "@mui/icons-material/Clear";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 
 export default function Page() {
   const [isLogin, setIsLogin] = useState(false);
@@ -79,6 +80,8 @@ export default function Page() {
   // API call to search
   const [isLoading, setIsLoading] = useState(true);
   const handleSearch = useCallback(() => {
+    setIsError(false);
+    setErrorMessage("");
     setIsLoading(true);
     fetch(
       "/api/v1/thread?q=" +
@@ -109,15 +112,15 @@ export default function Page() {
 
   // Updates the URL with the new search query and sort criteria
   const updateUrl = (searchQuery: string, sortCriteria: string) => {
-    navigate("/?q=" + searchQuery + "&order=" + availableThreadSortCriteria.get(sortCriteria));
+    navigate("/?q=" + searchQuery.trim() + "&order=" + availableThreadSortCriteria.get(sortCriteria));
   };
 
   // Runs a search whenever the url changes
   useEffect(() => {
     const hasSearchQuery = searchParams.has("q");
     if (hasSearchQuery) {
-      setSearchQuery(searchParams.get("q") ?? "");
-      setInputQuery(searchParams.get("q") ?? "");
+      setSearchQuery(searchParams.get("q")?.trim() ?? "");
+      setInputQuery(searchParams.get("q")?.trim() ?? "");
       setCurrentPage(1);
     }
     handleSearch();
@@ -172,7 +175,18 @@ export default function Page() {
           InputProps={{
             endAdornment: (
               <IconButton>
-                <ClearIcon onClick={resetSearch} />
+                {inputQuery !== "" ? (
+                  <ClearIcon onClick={resetSearch} />
+                ) : (
+                  <HelpOutlineIcon
+                    onClick={() =>
+                      alert(
+                        "Searches for threads that matches all keywords in either the title or body. \n\n" +
+                          "To additionally search for tags, use the following format: tag:tag_name \n\n",
+                      )
+                    }
+                  />
+                )}
               </IconButton>
             ),
           }}

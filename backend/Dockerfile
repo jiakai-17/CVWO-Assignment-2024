@@ -10,7 +10,7 @@ COPY . .
 RUN go mod download
 
 # Compile the binary
-RUN CGO_ENABLED=0 GOOS=linux go build -o /docker-backend backend/cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -o /docker-backend
 
 FROM alpine:3.19
 
