@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"net/http"
+	"regexp"
 	"strings"
 )
 
@@ -63,7 +64,8 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 	var tags []string
 	for _, tag := range updatedThread.Tags {
 		trimmedTag := strings.TrimSpace(tag)
-		if len(trimmedTag) > 0 {
+		if len(trimmedTag) > 0 && len(trimmedTag) <= 30 &&
+			regexp.MustCompile(`^[a-zA-Z0-9-]+$`).MatchString(trimmedTag) {
 			tags = append(tags, trimmedTag)
 		}
 	}

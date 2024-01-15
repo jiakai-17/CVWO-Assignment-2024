@@ -36,10 +36,10 @@ export default function Navbar() {
     <div>
       <AppBar
         position="static"
-        className={"px-4"}
+        className={"px-0 md:px-4"}
       >
         <Toolbar>
-          <div className={"mr-8"}>
+          <div className={"mr-2"}>
             <Link
               to={"/"}
               className={"no-underline"}
@@ -64,7 +64,7 @@ export default function Navbar() {
             </div>
           )}
           {isLogin && (
-            <div className={"mr-6 flex min-w-[30px] items-center gap-2"}>
+            <div className={"mr-2 flex min-w-[30px] items-center gap-2 md:mr-6"}>
               <div className={"hidden  md:block"}>
                 <Typography className={"text-white"}>Welcome,</Typography>
               </div>

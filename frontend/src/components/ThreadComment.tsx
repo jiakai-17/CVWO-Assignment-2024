@@ -127,14 +127,7 @@ export function ThreadComment(
             borderRadius: "0.375rem",
           }}
         >
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              mb: 2,
-              maxWidth: "100%",
-            }}
-          >
+          <div className={"mb-4 flex flex-col justify-between md:flex-row"}>
             <Box
               sx={{
                 display: "flex",
@@ -148,19 +141,14 @@ export function ThreadComment(
             </Box>
             <Box
               aria-label={"Comment Created Time"}
-              sx={{
-                display: "inline-flex",
-                gap: { xs: "0.4rem", sm: "0.5rem" },
-                alignItems: "center",
-                flexShrink: 0,
-              }}
+              className={"inline-flex"}
             >
               <UserContentTimestamp
                 createdTimestamp={new Date(currentComment.created_time)}
                 updatedTimestamp={new Date(currentComment.updated_time)}
               />
             </Box>
-          </Box>
+          </div>
           {isEditing && (
             <>
               {isError && (

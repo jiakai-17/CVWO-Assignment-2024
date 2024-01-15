@@ -52,7 +52,6 @@ export default function ThreadEditorPage(
     }
 
     if (!auth.isLogin) {
-      console.error("Not logged in");
       navigate("/login");
       return;
     }
@@ -231,19 +230,21 @@ export default function ThreadEditorPage(
                   <TextField
                     {...params}
                     variant="outlined"
-                    label="Tags (optional)"
-                    placeholder="Add up to 3 tags. Press Enter to create a tag."
+                    label="Tags (optional, max 3 tags)"
+                    placeholder="Press Enter to create a tag."
+                    helperText={"Max 30 chars per tag. Only lowercase letters, numbers, and dashes are allowed."}
                   />
                 )}
                 options={[]}
                 onChange={(_event, value) => {
-                  if (value.length > 3) {
-                    value = value.slice(0, 3);
-                  }
-                  for (let i = 0; i < value.length; i++) {
-                    value[i] = value[i].replace(/\s+/g, "-").toLowerCase();
-                  }
-                  setTags(value);
+                  setTags(
+                    value
+                      .map((tag) => tag.trim())
+                      .map((tag) => tag.replace(/[^a-zA-Z0-9\s-]/g, ""))
+                      .map((tag) => tag.replace(/\s+/g, "-").toLowerCase())
+                      .filter((tag) => tag.length > 0 && tag.length <= 30)
+                      .filter((_, index) => index < 3),
+                  );
                 }}
                 value={tags}
               />

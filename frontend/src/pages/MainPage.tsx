@@ -101,7 +101,6 @@ export default function Page() {
           response.text().then((text) => {
             setIsError(true);
             setErrorMessage(text);
-            console.error(text);
           });
         }
       })

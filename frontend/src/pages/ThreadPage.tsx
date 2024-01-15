@@ -28,13 +28,13 @@ export default function ThreadPage() {
     const id = window.location.pathname.split("/")[2];
     fetch(`/api/v1/thread/${id}`).then((res) => {
       if (!res.ok) {
-        setIsLoadingThread(false);
         res.text().then((text) => setThreadErrorMessage(text));
         setThreadToDisplay(null);
-      } else {
         setIsLoadingThread(false);
+      } else {
         setThreadErrorMessage("");
         res.json().then((data) => setThreadToDisplay(data));
+        setIsLoadingThread(false);
       }
     });
   }, []);
@@ -100,7 +100,6 @@ export default function ThreadPage() {
         });
         setIsLoadingComments(false);
       } else {
-        console.log(comments);
         res.json().then((data) => {
           if (shouldAppend) {
             setComments(comments.concat(data.comments));
@@ -213,7 +212,7 @@ export default function ThreadPage() {
         </div>
       )}
 
-      {!isLoadingThread && threadToDisplay === null && (
+      {!isLoadingThread && threadToDisplay === null && threadErrorMessage != "" && (
         <Alert
           severity={"error"}
           className={"mx-8 my-6"}
