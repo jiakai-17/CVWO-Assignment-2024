@@ -7,6 +7,7 @@ import MainPage from "./pages/MainPage.tsx";
 import ThreadPage from "./pages/ThreadPage.tsx";
 import ThreadEditorPage from "./pages/ThreadEditorPage.tsx";
 import AuthPage from "./pages/AuthPage.tsx";
+import NotFound from "./pages/NotFound.tsx";
 
 const router = createBrowserRouter([
   {
@@ -39,7 +40,7 @@ const router = createBrowserRouter([
       },
       {
         path: "*",
-        element: <h1>Not Found</h1>,
+        element: <NotFound />,
       },
     ],
   },

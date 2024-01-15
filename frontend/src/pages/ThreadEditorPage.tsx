@@ -59,8 +59,8 @@ export default function ThreadEditorPage(
 
     if (props.type === "create") {
       setIsLoading(false);
-      setThreadToEdit(null);
       setIsAuthorized(true);
+      setThreadToEdit(null);
     }
 
     if (props.type === "edit") {

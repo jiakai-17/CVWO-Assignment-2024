@@ -48,7 +48,7 @@ export default function Navbar() {
                 variant="h6"
                 className={"text-white"}
               >
-                FORUM
+                CS GOSSIP
               </Typography>
             </Link>
           </div>

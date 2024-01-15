@@ -152,7 +152,7 @@ export default function Page() {
         variant="h4"
         className={"px-2"}
       >
-        Welcome to CVWO Forum
+        Welcome to CS Gossip!
       </Typography>
       <Divider sx={{ mx: 3, my: 6 }} />
       <Box className={"xs:mx-4 mx-6 mb-4 flex flex-row gap-4"}>
