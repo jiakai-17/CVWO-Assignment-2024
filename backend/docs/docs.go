@@ -43,7 +43,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/comments.CreateCommentRequestJson"
+                            "$ref": "#/definitions/models.CreateCommentRequest"
                         }
                     }
                 ],
@@ -51,7 +51,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/tutorial.Comment"
+                            "$ref": "#/definitions/models.Comment"
                         }
                     },
                     "400": {
@@ -95,7 +95,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/comments.CommentUpdateRequestJson"
+                            "$ref": "#/definitions/models.UpdateCommentRequest"
                         }
                     }
                 ],
@@ -184,7 +184,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/threads.CreateThreadRequestJson"
+                            "$ref": "#/definitions/models.CreateThreadRequest"
                         }
                     }
                 ],
@@ -192,7 +192,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/tutorial.GetThreadDetailsRow"
+                            "$ref": "#/definitions/models.Thread"
                         }
                     },
                     "400": {
@@ -203,9 +203,6 @@ const docTemplate = `{
                     },
                     "405": {
                         "description": "Method not allowed"
-                    },
-                    "413": {
-                        "description": "Input too large"
                     },
                     "500": {
                         "description": "Internal server error"
@@ -257,7 +254,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/threads.SearchThreadResponse"
+                            "$ref": "#/definitions/models.SearchThreadResponse"
                         }
                     },
                     "405": {
@@ -295,7 +292,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/tutorial.Thread"
+                            "$ref": "#/definitions/models.Thread"
                         }
                     },
                     "404": {
@@ -340,7 +337,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/threads.ThreadUpdateRequestJson"
+                            "$ref": "#/definitions/models.UpdateThreadRequest"
                         }
                     }
                 ],
@@ -446,7 +443,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/comments.GetCommentResponse"
+                            "$ref": "#/definitions/models.GetCommentResponse"
                         }
                     },
                     "405": {
@@ -478,7 +475,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.AuthRequestJson"
+                            "$ref": "#/definitions/models.AuthRequest"
                         }
                     }
                 ],
@@ -486,7 +483,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.AuthResponseJson"
+                            "$ref": "#/definitions/models.AuthResponse"
                         }
                     },
                     "400": {
@@ -521,7 +518,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.AuthRequestJson"
+                            "$ref": "#/definitions/models.AuthRequest"
                         }
                     }
                 ],
@@ -529,7 +526,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.AuthResponseJson"
+                            "$ref": "#/definitions/models.AuthResponse"
                         }
                     },
                     "400": {
@@ -549,40 +546,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "comments.CommentUpdateRequestJson": {
-            "type": "object",
-            "properties": {
-                "body": {
-                    "type": "string"
-                }
-            }
-        },
-        "comments.CreateCommentRequestJson": {
-            "type": "object",
-            "properties": {
-                "body": {
-                    "type": "string"
-                },
-                "thread_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "comments.GetCommentResponse": {
-            "type": "object",
-            "properties": {
-                "comments": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/tutorial.Comment"
-                    }
-                },
-                "count": {
-                    "type": "integer"
-                }
-            }
-        },
-        "models.AuthRequestJson": {
+        "models.AuthRequest": {
             "type": "object",
             "properties": {
                 "password": {
@@ -593,7 +557,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.AuthResponseJson": {
+        "models.AuthResponse": {
             "type": "object",
             "properties": {
                 "token": {
@@ -604,89 +568,14 @@ const docTemplate = `{
                 }
             }
         },
-        "pgtype.InfinityModifier": {
-            "type": "integer",
-            "enum": [
-                1,
-                0,
-                -1
-            ],
-            "x-enum-varnames": [
-                "Infinity",
-                "Finite",
-                "NegativeInfinity"
-            ]
-        },
-        "pgtype.Timestamptz": {
-            "type": "object",
-            "properties": {
-                "infinityModifier": {
-                    "$ref": "#/definitions/pgtype.InfinityModifier"
-                },
-                "time": {
-                    "type": "string"
-                },
-                "valid": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "threads.CreateThreadRequestJson": {
-            "type": "object",
-            "properties": {
-                "body": {
-                    "type": "string"
-                },
-                "tags": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "title": {
-                    "type": "string"
-                }
-            }
-        },
-        "threads.SearchThreadResponse": {
-            "type": "object",
-            "properties": {
-                "threads": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/tutorial.GetThreadsByCriteriaRow"
-                    }
-                },
-                "total_threads": {
-                    "type": "integer"
-                }
-            }
-        },
-        "threads.ThreadUpdateRequestJson": {
-            "type": "object",
-            "properties": {
-                "body": {
-                    "type": "string"
-                },
-                "tags": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "title": {
-                    "type": "string"
-                }
-            }
-        },
-        "tutorial.Comment": {
+        "models.Comment": {
             "type": "object",
             "properties": {
                 "body": {
                     "type": "string"
                 },
                 "created_time": {
-                    "$ref": "#/definitions/pgtype.Timestamptz"
+                    "type": "string"
                 },
                 "creator": {
                     "type": "string"
@@ -698,18 +587,74 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_time": {
-                    "$ref": "#/definitions/pgtype.Timestamptz"
+                    "type": "string"
                 }
             }
         },
-        "tutorial.GetThreadDetailsRow": {
+        "models.CreateCommentRequest": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "thread_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CreateThreadRequest": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.GetCommentResponse": {
+            "type": "object",
+            "properties": {
+                "comments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Comment"
+                    }
+                },
+                "count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.SearchThreadResponse": {
+            "type": "object",
+            "properties": {
+                "threads": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Thread"
+                    }
+                },
+                "total_threads": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.Thread": {
             "type": "object",
             "properties": {
                 "body": {
                     "type": "string"
                 },
                 "created_time": {
-                    "$ref": "#/definitions/pgtype.Timestamptz"
+                    "type": "string"
                 },
                 "creator": {
                     "type": "string"
@@ -730,27 +675,23 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_time": {
-                    "$ref": "#/definitions/pgtype.Timestamptz"
+                    "type": "string"
                 }
             }
         },
-        "tutorial.GetThreadsByCriteriaRow": {
+        "models.UpdateCommentRequest": {
             "type": "object",
             "properties": {
                 "body": {
                     "type": "string"
-                },
-                "created_time": {
-                    "$ref": "#/definitions/pgtype.Timestamptz"
-                },
-                "creator": {
+                }
+            }
+        },
+        "models.UpdateThreadRequest": {
+            "type": "object",
+            "properties": {
+                "body": {
                     "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "num_comments": {
-                    "type": "integer"
                 },
                 "tags": {
                     "type": "array",
@@ -760,35 +701,6 @@ const docTemplate = `{
                 },
                 "title": {
                     "type": "string"
-                },
-                "updated_time": {
-                    "$ref": "#/definitions/pgtype.Timestamptz"
-                }
-            }
-        },
-        "tutorial.Thread": {
-            "type": "object",
-            "properties": {
-                "body": {
-                    "type": "string"
-                },
-                "created_time": {
-                    "$ref": "#/definitions/pgtype.Timestamptz"
-                },
-                "creator": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "num_comments": {
-                    "type": "integer"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "updated_time": {
-                    "$ref": "#/definitions/pgtype.Timestamptz"
                 }
             }
         }

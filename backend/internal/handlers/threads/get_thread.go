@@ -18,7 +18,7 @@ import (
 // @Accept json
 // @Produce json
 // @Param id path string true "Thread ID"
-// @Success 200 {object} tutorial.Thread
+// @Success 200 {object} models.Thread
 // @Failure 404 "Thread not found"
 // @Failure 405 "Method not allowed"
 // @Failure 500 "Internal server error"
@@ -60,7 +60,7 @@ func GetThread(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create the thread
-	thread, err := queries.GetThreadDetails(ctx, pgThreadId)
+	pgThread, err := queries.GetThreadDetails(ctx, pgThreadId)
 
 	if err != nil {
 		if err.Error() == "no rows in result set" {
@@ -83,6 +83,8 @@ func GetThread(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	thread := database.FormatPgThread(pgThread)
 
 	// Return thread as JSON object
 	w.Header().Set("Content-Type", "application/json")

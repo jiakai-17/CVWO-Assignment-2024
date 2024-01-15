@@ -1,96 +1,25 @@
 basePath: /api/v1
 definitions:
-  comments.CommentUpdateRequestJson:
-    properties:
-      body:
-        type: string
-    type: object
-  comments.CreateCommentRequestJson:
-    properties:
-      body:
-        type: string
-      thread_id:
-        type: string
-    type: object
-  comments.GetCommentResponse:
-    properties:
-      comments:
-        items:
-          $ref: '#/definitions/tutorial.Comment'
-        type: array
-      count:
-        type: integer
-    type: object
-  models.AuthRequestJson:
+  models.AuthRequest:
     properties:
       password:
         type: string
       username:
         type: string
     type: object
-  models.AuthResponseJson:
+  models.AuthResponse:
     properties:
       token:
         type: string
       username:
         type: string
     type: object
-  pgtype.InfinityModifier:
-    enum:
-    - 1
-    - 0
-    - -1
-    type: integer
-    x-enum-varnames:
-    - Infinity
-    - Finite
-    - NegativeInfinity
-  pgtype.Timestamptz:
-    properties:
-      infinityModifier:
-        $ref: '#/definitions/pgtype.InfinityModifier'
-      time:
-        type: string
-      valid:
-        type: boolean
-    type: object
-  threads.CreateThreadRequestJson:
-    properties:
-      body:
-        type: string
-      tags:
-        items:
-          type: string
-        type: array
-      title:
-        type: string
-    type: object
-  threads.SearchThreadResponse:
-    properties:
-      threads:
-        items:
-          $ref: '#/definitions/tutorial.GetThreadsByCriteriaRow'
-        type: array
-      total_threads:
-        type: integer
-    type: object
-  threads.ThreadUpdateRequestJson:
-    properties:
-      body:
-        type: string
-      tags:
-        items:
-          type: string
-        type: array
-      title:
-        type: string
-    type: object
-  tutorial.Comment:
+  models.Comment:
     properties:
       body:
         type: string
       created_time:
-        $ref: '#/definitions/pgtype.Timestamptz'
+        type: string
       creator:
         type: string
       id:
@@ -98,14 +27,50 @@ definitions:
       thread_id:
         type: string
       updated_time:
-        $ref: '#/definitions/pgtype.Timestamptz'
+        type: string
     type: object
-  tutorial.GetThreadDetailsRow:
+  models.CreateCommentRequest:
+    properties:
+      body:
+        type: string
+      thread_id:
+        type: string
+    type: object
+  models.CreateThreadRequest:
+    properties:
+      body:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+    type: object
+  models.GetCommentResponse:
+    properties:
+      comments:
+        items:
+          $ref: '#/definitions/models.Comment'
+        type: array
+      count:
+        type: integer
+    type: object
+  models.SearchThreadResponse:
+    properties:
+      threads:
+        items:
+          $ref: '#/definitions/models.Thread'
+        type: array
+      total_threads:
+        type: integer
+    type: object
+  models.Thread:
     properties:
       body:
         type: string
       created_time:
-        $ref: '#/definitions/pgtype.Timestamptz'
+        type: string
       creator:
         type: string
       id:
@@ -119,45 +84,23 @@ definitions:
       title:
         type: string
       updated_time:
-        $ref: '#/definitions/pgtype.Timestamptz'
+        type: string
     type: object
-  tutorial.GetThreadsByCriteriaRow:
+  models.UpdateCommentRequest:
     properties:
       body:
         type: string
-      created_time:
-        $ref: '#/definitions/pgtype.Timestamptz'
-      creator:
+    type: object
+  models.UpdateThreadRequest:
+    properties:
+      body:
         type: string
-      id:
-        type: string
-      num_comments:
-        type: integer
       tags:
         items:
           type: string
         type: array
       title:
         type: string
-      updated_time:
-        $ref: '#/definitions/pgtype.Timestamptz'
-    type: object
-  tutorial.Thread:
-    properties:
-      body:
-        type: string
-      created_time:
-        $ref: '#/definitions/pgtype.Timestamptz'
-      creator:
-        type: string
-      id:
-        type: string
-      num_comments:
-        type: integer
-      title:
-        type: string
-      updated_time:
-        $ref: '#/definitions/pgtype.Timestamptz'
     type: object
 host: localhost:9090
 info:
@@ -206,7 +149,7 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/comments.CommentUpdateRequestJson'
+          $ref: '#/definitions/models.UpdateCommentRequest'
       responses:
         "200":
           description: OK
@@ -236,14 +179,14 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/comments.CreateCommentRequestJson'
+          $ref: '#/definitions/models.CreateCommentRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/tutorial.Comment'
+            $ref: '#/definitions/models.Comment'
         "400":
           description: Invalid data
         "401":
@@ -302,7 +245,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/tutorial.Thread'
+            $ref: '#/definitions/models.Thread'
         "404":
           description: Thread not found
         "405":
@@ -327,7 +270,7 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/threads.ThreadUpdateRequestJson'
+          $ref: '#/definitions/models.UpdateThreadRequest'
       produces:
       - application/json
       responses:
@@ -372,7 +315,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/comments.GetCommentResponse'
+            $ref: '#/definitions/models.GetCommentResponse'
         "405":
           description: Method not allowed
         "500":
@@ -391,22 +334,20 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/threads.CreateThreadRequestJson'
+          $ref: '#/definitions/models.CreateThreadRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/tutorial.GetThreadDetailsRow'
+            $ref: '#/definitions/models.Thread'
         "400":
           description: Invalid data
         "401":
           description: Invalid JWT token
         "405":
           description: Method not allowed
-        "413":
-          description: Input too large
         "500":
           description: Internal server error
       security:
@@ -444,7 +385,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/threads.SearchThreadResponse'
+            $ref: '#/definitions/models.SearchThreadResponse'
         "405":
           description: Method not allowed
         "500":
@@ -463,14 +404,14 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/models.AuthRequestJson'
+          $ref: '#/definitions/models.AuthRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.AuthResponseJson'
+            $ref: '#/definitions/models.AuthResponse'
         "400":
           description: Incorrect username/password
         "405":
@@ -491,14 +432,14 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/models.AuthRequestJson'
+          $ref: '#/definitions/models.AuthRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.AuthResponseJson'
+            $ref: '#/definitions/models.AuthResponse'
         "400":
           description: Invalid data
         "401":

@@ -2,24 +2,22 @@ package comments
 
 import (
 	"backend/internal/database"
+	"backend/internal/models"
 	"backend/internal/utils"
 	"context"
 	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5/pgtype"
 	"net/http"
+	"strings"
 )
-
-type CommentUpdateRequestJson struct {
-	Body string `json:"body"`
-}
 
 // UpdateComment godoc
 // @Summary Handles comment update requests
 // @Description Updates a comment
 // @Tags comment
 // @Param id path string true "Comment UUID"
-// @Param data body CommentUpdateRequestJson true "Comment data"
+// @Param data body models.UpdateCommentRequest true "Comment data"
 // @Security ApiKeyAuth
 // @Success 200
 // @Failure 400 "Invalid data"
@@ -41,7 +39,7 @@ func UpdateComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get details from request
-	var commentUpdate CommentUpdateRequestJson
+	var commentUpdate models.UpdateCommentRequest
 
 	err := json.NewDecoder(r.Body).Decode(&commentUpdate)
 
@@ -57,7 +55,19 @@ func UpdateComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	commentId := mux.Vars(r)["id"]
-	body := commentUpdate.Body
+	body := strings.TrimSpace(commentUpdate.Body)
+
+	// Ensure comment body is not empty and is not too long
+	if len(body) == 0 || len(body) > 3000 {
+		utils.Log("UpdateComment", "Invalid comment body", nil)
+		w.WriteHeader(http.StatusBadRequest)
+		_, err := w.Write([]byte("Invalid data"))
+		if err != nil {
+			utils.Log("UpdateComment", "Unable to write response", err)
+			return
+		}
+		return
+	}
 
 	// Get and verify JWT token from request header
 	token := r.Header.Get("Authorization")[7:]

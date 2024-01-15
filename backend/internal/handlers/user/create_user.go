@@ -19,8 +19,8 @@ import (
 // @Tags user
 // @Accept json
 // @Produce json
-// @Param data body models.AuthRequestJson true "Username and password"
-// @Success 200 {object} models.AuthResponseJson
+// @Param data body models.AuthRequest true "Username and password"
+// @Success 200 {object} models.AuthResponse
 // @Failure 400 "Username already exists"
 // @Failure 400 "Invalid data"
 // @Failure 400 "Incorrect username/password"
@@ -41,7 +41,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get username and password from request
-	var creds models.AuthRequestJson
+	var creds models.AuthRequest
 	err := json.NewDecoder(r.Body).Decode(&creds)
 	if err != nil {
 		utils.Log("CreateUser", "Unable to decode JSON", err)
@@ -147,7 +147,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	// Return username and token as JSON object
 	w.Header().Set("Content-Type", "application/json")
-	jsonErr := json.NewEncoder(w).Encode(models.AuthResponseJson{
+	jsonErr := json.NewEncoder(w).Encode(models.AuthResponse{
 		Username: username,
 		Token:    token})
 

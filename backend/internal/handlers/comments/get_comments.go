@@ -2,6 +2,7 @@ package comments
 
 import (
 	"backend/internal/database"
+	"backend/internal/models"
 	"backend/internal/utils"
 	"context"
 	"encoding/json"
@@ -12,11 +13,6 @@ import (
 	"strconv"
 )
 
-type GetCommentResponse struct {
-	Comments []database.Comment `json:"comments"`
-	Count    int32              `json:"count"`
-}
-
 // GetComments godoc
 // @Summary Handles comment retrieval requests
 // @Description Retrieves comments for the given thread
@@ -24,7 +20,7 @@ type GetCommentResponse struct {
 // @Param thread_id path string true "Thread UUID"
 // @Param order query string false "Sorting order, default 'created_time_asc'" Enums(created_time_asc, created_time_desc)
 // @Param p query string false "Page number, default '1'"
-// @Success 200 {object} GetCommentResponse
+// @Success 200 {object} models.GetCommentResponse
 // @Failure 405 "Method not allowed"
 // @Failure 500 "Internal server error"
 // @Router /thread/{thread_id}/comments [get]
@@ -84,7 +80,7 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get the comments
-	comments, err := queries.GetComments(ctx, database.GetCommentsParams{
+	pgComments, err := queries.GetComments(ctx, database.GetCommentsParams{
 		ThreadID:  pgThreadId,
 		Sortorder: order,
 		Offset:    int32(offset),
@@ -115,8 +111,8 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var response GetCommentResponse
-	response.Comments = comments
+	var response models.GetCommentResponse
+	response.Comments = database.FormatPgComments(pgComments)
 	response.Count = int32(commentsCount)
 
 	// Return comments as JSON object

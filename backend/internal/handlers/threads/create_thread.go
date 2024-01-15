@@ -2,20 +2,15 @@ package threads
 
 import (
 	"backend/internal/database"
+	"backend/internal/models"
 	"backend/internal/utils"
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/jackc/pgx/v5"
 	"net/http"
+	"strings"
 )
-
-type CreateThreadRequestJson struct {
-	Title string   `json:"title"`
-	Body  string   `json:"body"`
-	Tags  []string `json:"tags"`
-}
 
 // CreateThread godoc
 // @Summary Handles thread creation requests
@@ -23,13 +18,12 @@ type CreateThreadRequestJson struct {
 // @Tags thread
 // @Accept json
 // @Produce json
-// @Param data body CreateThreadRequestJson true "Thread data"
+// @Param data body models.CreateThreadRequest true "Thread data"
 // @Security ApiKeyAuth
-// @Success 200 {object} tutorial.GetThreadDetailsRow
+// @Success 200 {object} models.Thread
 // @Failure 400 "Invalid data"
 // @Failure 401 "Invalid JWT token"
 // @Failure 405 "Method not allowed"
-// @Failure 413 "Input too large"
 // @Failure 500 "Internal server error"
 // @Router /thread/create [post]
 func CreateThread(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +40,7 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get details from request
-	var threadCreate CreateThreadRequestJson
+	var threadCreate models.CreateThreadRequest
 	err := json.NewDecoder(r.Body).Decode(&threadCreate)
 	if err != nil {
 		utils.Log("CreateThread", "Unable to decode JSON", err)
@@ -61,21 +55,17 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 
 	title := threadCreate.Title
 	body := threadCreate.Body
-
-	if len(threadCreate.Tags) > 3 {
-		utils.Log("CreateThread", "Too many tags", errors.New("too many tags"))
-		w.WriteHeader(http.StatusRequestEntityTooLarge)
-		_, err := w.Write([]byte("Input too large"))
-		if err != nil {
-			utils.Log("CreateThread", "Unable to write response", err)
-			return
+	var tags []string
+	for _, tag := range threadCreate.Tags {
+		trimmedTag := strings.TrimSpace(tag)
+		if len(trimmedTag) > 0 {
+			tags = append(tags, trimmedTag)
 		}
-		return
 	}
 
-	if title == "" || body == "" {
-		utils.Log("CreateThread", "Title or body is empty",
-			errors.New("title or body is empty"))
+	// Check if fields are valid
+	if len(tags) > 3 || len(title) == 0 || len(body) == 0 || len(title) > 100 || len(body) > 3000 {
+		utils.Log("CreateThread", "Invalid inputs", errors.New("invalid input"))
 		w.WriteHeader(http.StatusBadRequest)
 		_, err := w.Write([]byte("Invalid data"))
 		if err != nil {
@@ -201,7 +191,7 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 
 	hasCommitted = true
 
-	createdThread, err := queries.GetThreadDetails(ctx, pgThreadId)
+	pgCreatedThread, err := queries.GetThreadDetails(ctx, pgThreadId)
 
 	if err != nil {
 		utils.Log("CreateThread", "Unable to get thread details", err)
@@ -213,6 +203,8 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+
+	createdThread := database.FormatPgThread(pgCreatedThread)
 
 	// Return thread as JSON object
 	w.Header().Set("Content-Type", "application/json")
@@ -229,15 +221,7 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Adapted from https://stackoverflow.com/a/71134336
-	var threadId = fmt.Sprintf("%x-%x-%x-%x-%x",
-		pgThreadId.Bytes[0:4],
-		pgThreadId.Bytes[4:6],
-		pgThreadId.Bytes[6:8],
-		pgThreadId.Bytes[8:10],
-		pgThreadId.Bytes[10:16])
-
-	utils.Log("CreateThread", "Thread: "+threadId+" created by: "+verifiedUsername, nil)
+	utils.Log("CreateThread", "Thread: "+createdThread.ID+" created by: "+verifiedUsername, nil)
 
 	return
 }

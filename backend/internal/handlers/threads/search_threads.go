@@ -2,6 +2,7 @@ package threads
 
 import (
 	"backend/internal/database"
+	"backend/internal/models"
 	"backend/internal/utils"
 	"context"
 	"encoding/json"
@@ -12,16 +13,6 @@ import (
 	"strings"
 )
 
-type Pagination struct {
-	TotalPages  int `json:"total_pages"`
-	CurrentPage int `json:"current_page"`
-}
-
-type SearchThreadResponse struct {
-	TotalThreads int                                `json:"total_threads"`
-	Threads      []database.GetThreadsByCriteriaRow `json:"threads"`
-}
-
 // SearchThreads godoc
 // @Summary Handles thread search requests
 // @Description Retrieves threads matching the given query
@@ -31,7 +22,7 @@ type SearchThreadResponse struct {
 // @Param q query string true "Search query"
 // @Param order query string false "Sorting order, default 'created_time_desc'" Enums(created_time_asc, created_time_desc, num_comments_asc, num_comments_desc)
 // @Param p query string false "Page number, default '1'"
-// @Success 200 {object} SearchThreadResponse
+// @Success 200 {object} models.SearchThreadResponse
 // @Failure 405 "Method not allowed"
 // @Failure 500 "Internal server error"
 // @Router /thread/search [get]
@@ -128,7 +119,10 @@ func SearchThreads(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	jsonErr := json.NewEncoder(w).Encode(SearchThreadResponse{int(totalThreads), threads})
+	jsonErr := json.NewEncoder(w).Encode(models.SearchThreadResponse{
+		TotalThreads: int32(totalThreads),
+		Threads:      database.FormatPgThreads(threads),
+	})
 
 	if jsonErr != nil {
 		utils.Log("SearchThreads", "Unable to encode threads as JSON", err)

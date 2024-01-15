@@ -2,6 +2,7 @@ package threads
 
 import (
 	"backend/internal/database"
+	"backend/internal/models"
 	"backend/internal/utils"
 	"context"
 	"encoding/json"
@@ -10,20 +11,15 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"net/http"
+	"strings"
 )
-
-type ThreadUpdateRequestJson struct {
-	Title string   `json:"title"`
-	Body  string   `json:"body"`
-	Tags  []string `json:"tags"`
-}
 
 // UpdateThread godoc
 // @Summary Handles thread update requests
 // @Description Updates a thread
 // @Tags thread
 // @Param id path string true "Thread UUID"
-// @Param data body ThreadUpdateRequestJson true "Thread data"
+// @Param data body models.UpdateThreadRequest true "Thread data"
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
@@ -50,7 +46,7 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 	// Get details from request
 	vars := mux.Vars(r)
 	threadId := vars["id"]
-	var updatedThread ThreadUpdateRequestJson
+	var updatedThread models.UpdateThreadRequest
 	err := json.NewDecoder(r.Body).Decode(&updatedThread)
 
 	if err != nil {
@@ -64,24 +60,19 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	title := updatedThread.Title
-	body := updatedThread.Body
-	tags := updatedThread.Tags
-
-	// Check if tags are valid
-	if len(tags) > 3 {
-		utils.Log("UpdateThread", "Too many tags", errors.New("too many tags"))
-		w.WriteHeader(http.StatusRequestEntityTooLarge)
-		_, err := w.Write([]byte("Input too large"))
-		if err != nil {
-			utils.Log("UpdateThread", "Unable to write response", err)
-			return
+	title := strings.TrimSpace(updatedThread.Title)
+	body := strings.TrimSpace(updatedThread.Body)
+	var tags []string
+	for _, tag := range updatedThread.Tags {
+		trimmedTag := strings.TrimSpace(tag)
+		if len(trimmedTag) > 0 {
+			tags = append(tags, trimmedTag)
 		}
-		return
 	}
 
-	if title == "" || body == "" {
-		utils.Log("UpdateThread", "Title or body is empty", errors.New("title or body is empty"))
+	// Check if fields are valid
+	if len(tags) > 3 || len(title) == 0 || len(body) == 0 || len(title) > 100 || len(body) > 3000 {
+		utils.Log("UpdateThread", "Invalid inputs", errors.New("invalid input"))
 		w.WriteHeader(http.StatusBadRequest)
 		_, err := w.Write([]byte("Invalid data"))
 		if err != nil {
