@@ -31,7 +31,6 @@ func GetThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Method not allowed"))
 		if err != nil {
 			utils.Log("GetThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -55,8 +54,8 @@ func GetThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("GetThread", "Unable to write response", err)
-			return
 		}
+		return
 	}
 
 	// Create the thread
@@ -69,19 +68,16 @@ func GetThread(w http.ResponseWriter, r *http.Request) {
 			_, err := w.Write([]byte("Thread not found"))
 			if err != nil {
 				utils.Log("GetThread", "Unable to write response", err)
-				return
 			}
-			return
 		} else {
 			utils.Log("GetThread", "Unable to get thread "+id, err)
 			w.WriteHeader(http.StatusInternalServerError)
 			_, err := w.Write([]byte("Internal server error"))
 			if err != nil {
 				utils.Log("GetThread", "Unable to write response", err)
-				return
 			}
-			return
 		}
+		return
 	}
 
 	thread := database.FormatPgThread(pgThread)
@@ -96,7 +92,6 @@ func GetThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("GetThread", "Unable to write response", err)
-			return
 		}
 		return
 	}

@@ -34,7 +34,6 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Method not allowed"))
 		if err != nil {
 			utils.Log("CreateThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -48,7 +47,6 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Malformed JSON"))
 		if err != nil {
 			utils.Log("CreateThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -70,7 +68,6 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Invalid data"))
 		if err != nil {
 			utils.Log("CreateThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -85,7 +82,6 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Invalid JWT token"))
 		if err != nil {
 			utils.Log("CreateThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -104,7 +100,6 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("CreateThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -122,7 +117,6 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 			_, err := w.Write([]byte("Internal server error"))
 			if err != nil {
 				utils.Log("CreateThread", "Unable to write response", err)
-				return
 			}
 		}
 	}(tx, ctx)
@@ -141,7 +135,6 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("CreateThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -156,7 +149,6 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("CreateThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -171,7 +163,6 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("CreateThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -184,7 +175,6 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("CreateThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -199,7 +189,6 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("CreateThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -216,7 +205,6 @@ func CreateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("CreateThread", "Unable to write response", err)
-			return
 		}
 		return
 	}

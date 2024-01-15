@@ -34,7 +34,6 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Method not allowed"))
 		if err != nil {
 			utils.Log("CreateComment", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -50,7 +49,6 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Invalid data"))
 		if err != nil {
 			utils.Log("CreateComment", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -65,7 +63,6 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Invalid data"))
 		if err != nil {
 			utils.Log("CreateComment", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -81,7 +78,6 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Invalid JWT token"))
 		if err != nil {
 			utils.Log("CreateComment", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -101,7 +97,6 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("CreateComment", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -121,8 +116,8 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("CreateComment", "Unable to write response", err)
-			return
 		}
+		return
 	}
 
 	comment := database.FormatPgComment(pgComment)
@@ -137,8 +132,8 @@ func CreateComment(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("CreateComment", "Unable to write response", err)
-			return
 		}
+		return
 	}
 
 	utils.Log("CreateComment", "Comment created on thread: "+threadId+"by: "+verifiedUsername, nil)

@@ -34,7 +34,6 @@ func SearchThreads(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Method not allowed"))
 		if err != nil {
 			utils.Log("SearchThreads", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -97,7 +96,6 @@ func SearchThreads(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("SearchThreads", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -113,7 +111,6 @@ func SearchThreads(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("SearchThreads", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -130,7 +127,6 @@ func SearchThreads(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("SearchThreads", "Unable to write response", err)
-			return
 		}
 		return
 	}

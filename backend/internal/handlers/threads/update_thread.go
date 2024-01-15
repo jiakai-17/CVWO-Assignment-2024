@@ -38,7 +38,6 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Method not allowed"))
 		if err != nil {
 			utils.Log("UpdateThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -55,7 +54,6 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Invalid data"))
 		if err != nil {
 			utils.Log("UpdateThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -77,7 +75,6 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Invalid data"))
 		if err != nil {
 			utils.Log("UpdateThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -92,7 +89,6 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Invalid JWT token"))
 		if err != nil {
 			utils.Log("UpdateThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -112,7 +108,6 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("UpdateThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -130,9 +125,7 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 			_, err := w.Write([]byte("Internal server error"))
 			if err != nil {
 				utils.Log("UpdateThread", "Unable to write response", err)
-				return
 			}
-			return
 		}
 	}(tx, ctx)
 
@@ -148,7 +141,6 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("UpdateThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -163,7 +155,6 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("No permission to update thread"))
 		if err != nil {
 			utils.Log("UpdateThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -180,8 +171,8 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("UpdateThread", "Unable to write response", err)
-			return
 		}
+		return
 	}
 
 	// Update the tags
@@ -192,8 +183,8 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("UpdateThread", "Unable to write response", err)
-			return
 		}
+		return
 	}
 
 	err = qtx.DeleteUnusedTags(ctx)
@@ -203,8 +194,8 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("UpdateThread", "Unable to write response", err)
-			return
 		}
+		return
 	}
 
 	err = qtx.AddNewTags(ctx, tags)
@@ -214,8 +205,8 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("UpdateThread", "Unable to write response", err)
-			return
 		}
+		return
 	}
 
 	err = qtx.AddThreadTags(ctx, database.AddThreadTagsParams{
@@ -227,8 +218,8 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("UpdateThread", "Unable to write response", err)
-			return
 		}
+		return
 	}
 
 	err = tx.Commit(ctx)
@@ -238,7 +229,6 @@ func UpdateThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("UpdateThread", "Unable to write response", err)
-			return
 		}
 		return
 	}

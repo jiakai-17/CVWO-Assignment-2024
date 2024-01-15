@@ -32,7 +32,6 @@ func DeleteThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Method not allowed"))
 		if err != nil {
 			utils.Log("DeleteThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -51,7 +50,6 @@ func DeleteThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Invalid JWT token"))
 		if err != nil {
 			utils.Log("DeleteThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -73,7 +71,6 @@ func DeleteThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("DeleteThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -89,7 +86,6 @@ func DeleteThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("No permission to delete thread"))
 		if err != nil {
 			utils.Log("DeleteThread", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -106,7 +102,6 @@ func DeleteThread(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("DeleteThread", "Unable to write response", err)
-			return
 		}
 		return
 	}

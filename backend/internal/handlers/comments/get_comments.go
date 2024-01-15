@@ -31,7 +31,6 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Method not allowed"))
 		if err != nil {
 			utils.Log("GetComments", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -74,7 +73,6 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("GetComments", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -93,7 +91,6 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("GetComments", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -106,7 +103,6 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("GetComments", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -125,7 +121,6 @@ func GetComments(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("GetComments", "Unable to write response", err)
-			return
 		}
 		return
 	}

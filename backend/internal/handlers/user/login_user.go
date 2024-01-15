@@ -32,7 +32,6 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Method not allowed"))
 		if err != nil {
 			utils.Log("LoginUser", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -46,7 +45,6 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Invalid data"))
 		if err != nil {
 			utils.Log("LoginUser", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -69,7 +67,6 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("LoginUser", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -80,7 +77,6 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Incorrect username/password"))
 		if err != nil {
 			utils.Log("LoginUser", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -93,7 +89,6 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("LoginUser", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -106,7 +101,6 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Incorrect username/password"))
 		if err != nil {
 			utils.Log("LoginUser", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -119,7 +113,6 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("LoginUser", "Unable to write response", err)
-			return
 		}
 		return
 	}
@@ -136,7 +129,6 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("Internal server error"))
 		if err != nil {
 			utils.Log("LoginUser", "Unable to write response", err)
-			return
 		}
 		return
 	}
