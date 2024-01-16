@@ -33,6 +33,7 @@ services:
     restart: always
     environment:
       DATABASE_URL: "YOUR_CONNECTION_STRING"
+      JWT_SECRETSTRING: "YOUR_JWT_SECRET_STRING"
     ports:
       - 9090:9090
     depends_on:

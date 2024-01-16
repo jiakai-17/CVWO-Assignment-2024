@@ -4,9 +4,9 @@ go 1.21
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.0
-	github.com/jackc/pgx/v5 v5.5.1
+	github.com/jackc/pgx/v5 v5.5.2
 	github.com/swaggo/swag v1.16.2
-	golang.org/x/crypto v0.16.0
+	golang.org/x/crypto v0.18.0
 )
 
 require (
