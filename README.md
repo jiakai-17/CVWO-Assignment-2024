@@ -2,6 +2,7 @@
 
 - A simple web forum
 - Demo: <https://gossip.kirara.dev/>
+- User Guide: <https://gossip-docs.pages.dev/user-guide/>
 
 ## Quick start
 
