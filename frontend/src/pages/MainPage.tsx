@@ -139,7 +139,7 @@ export default function Page() {
     updateUrl(inputQuery ?? "", threadSortCriteria);
   };
 
-  // Updates the URL when the clear button is clicked
+  // Resets the search bar and the URL
   const resetSearch = () => {
     setInputQuery("");
     setThreadSortCriteria("Newest first");
@@ -148,13 +148,32 @@ export default function Page() {
     navigate("/");
   };
 
+  // Handles click on the IconButton in the search bar.
+  // When the search bar is empty, it shows the help dialog.
+  // When the search bar is not empty, it clears the search bar.
+  const handleSearchIconButtonClick = () => {
+    if (inputQuery !== "") {
+      resetSearch();
+    } else {
+      alert(
+        "Searches for threads that matches all keywords in either the title or body. \n\n" +
+          "To additionally search for tags, use the following format: tag:tag_name \n\n" +
+          "Refer to the user guide for more information.",
+      );
+    }
+  };
+
   return (
-    <Box className={"mx-2 mb-10 mt-16 text-center"}>
+    <Box className={"mx-2 mt-10 text-center md:mt-12"}>
       <Typography
         variant="h4"
         className={"px-2"}
       >
         Welcome to CS Gossip!
+      </Typography>
+      <Typography className={"px-2 pt-4"}>
+        Not sure how to use this website? Click <Link to={"https://gossip-docs.pages.dev/user-guide/"}>here</Link> to
+        read the user guide!
       </Typography>
       <Divider sx={{ mx: 3, my: 6 }} />
       <Box className={"xs:mx-4 mx-6 mb-4 flex flex-row gap-4"}>
@@ -173,19 +192,8 @@ export default function Page() {
           }}
           InputProps={{
             endAdornment: (
-              <IconButton>
-                {inputQuery !== "" ? (
-                  <ClearIcon onClick={resetSearch} />
-                ) : (
-                  <HelpOutlineIcon
-                    onClick={() =>
-                      alert(
-                        "Searches for threads that matches all keywords in either the title or body. \n\n" +
-                          "To additionally search for tags, use the following format: tag:tag_name \n\n",
-                      )
-                    }
-                  />
-                )}
+              <IconButton onClick={handleSearchIconButtonClick}>
+                {inputQuery !== "" ? <ClearIcon /> : <HelpOutlineIcon />}
               </IconButton>
             ),
           }}
