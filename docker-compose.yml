@@ -32,7 +32,7 @@ services:
     container_name: backend
     restart: always
     environment:
-      DATABASE_URL: "YOUR_CONNECTION_STRING"
+      DATABASE_URL: "host=db user=postgres dbname=YOUR_DB password=YOUR_PASSWORD port=5432"
       JWT_SECRETSTRING: "YOUR_JWT_SECRET_STRING"
     ports:
       - 9090:9090

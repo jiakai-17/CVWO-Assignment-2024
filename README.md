@@ -14,11 +14,13 @@
 3. Edit the environment variables in the `docker-compose.yml` configuration file.
    1. `POSTGRES_PASSWORD: YOUR_PASSWORD`: Edit `YOUR_PASSWORD` to your desired password to access the database.
    2. `POSTGRES_DB: YOUR_DB`: Edit `YOUR_DB` to your desired database name.
-   3. `DATABASE_URL: "YOUR_CONNECTION_STRING"`: Edit `YOUR_CONNECTION_STRING` to your desired connection string. The connection string should be in the format `"host=localhost user=postgres dbname=YOUR_DB password=YOUR_PASSWORD port=5432"`.
+   3. `DATABASE_URL: "YOUR_CONNECTION_STRING"`: Edit `YOUR_CONNECTION_STRING` to your desired connection string. The connection string should be in the format `"host=db user=postgres dbname=YOUR_DB password=YOUR_PASSWORD port=5432"`.
    4. `JWT_SECRETSTRING: "YOUR_JWT_SECRET_STRING"`: Edit `YOUR_JWT_SECRET_STRING` to your desired secret string used to sign JWT tokens.
 4. Build and start the application
     1. `docker-compose up -d --build`
 5. Access the application at `http://localhost:3000`.
+6. Access the database management interface (adminer) at `http://localhost:8080`.
+7. To stop the application, run `docker-compose down`.
 
 ## Environment variables
 
@@ -26,7 +28,7 @@
 
 |Name|Description|Default value|Required|Example|
 |---|---|---|---|---|
-|`DATABASE_URL`|The connection string used to connect to the database.|None|Yes|`"host=localhost user=postgres dbname=YOUR_DB password=YOUR_PASSWORD port=5432"`|
+|`DATABASE_URL`|The connection string used to connect to the database.|None|Yes|`"host=db user=postgres dbname=YOUR_DB password=YOUR_PASSWORD port=5432"`|
 |`JWT_SECRETSTRING`|The secret used to sign JWT tokens.|`secretstring`|No|`"YOUR_JWT_SECRET_STRING"`|
 |`BASE_PATH`|The base path of the API.|`/api/v1`|No|`"/api/v1"`|
 
