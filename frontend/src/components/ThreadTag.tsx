@@ -1,5 +1,3 @@
-"use client";
-
 import { Chip } from "@mui/material";
 import { Link, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
