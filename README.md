@@ -1,10 +1,13 @@
 # CS Gossip
 
-- A simple web forum
+A simple web forum.
+
+Developed by Li Jiakai.
+
 - Demo: <https://gossip.kirara.dev/>
 - User Guide: <https://gossip-docs.pages.dev/user-guide/>
 
-## Quick start
+## Quick Start
 
 1. Ensure `docker` and `docker compose` are installed.
    1. Refer to the Docker Docs on guides to install [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) for your system.
